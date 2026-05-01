@@ -2,57 +2,108 @@ import streamlit as st
 import pandas as pd
 import psycopg2
 import joblib
-import numpy as np
-import os
-import plotly.express as px
+import requests
+from datetime import datetime
 
-DB_URL = os.getenv("SUPABASE_DB_URL")
+# --- CONFIG DASHBOARD ---
+st.set_page_config(page_title="EWS Banjir Tapteng", page_icon="🌊", layout="wide")
 
-st.set_page_config(page_title="EWS BANJIR TAPTENG", layout="wide")
-st.title("🌊 Dashboard EWS Banjir Tapanuli Tengah")
+# --- LOAD SECRETS (Streamlit Cloud) ---
+DB_URL = st.secrets["SUPABASE_DB_URL"]
+TELEGRAM_TOKEN = st.secrets["TELEGRAM_BOT_TOKEN"]
+CHAT_ID = st.secrets["TELEGRAM_CHANNEL_ID"]
 
-tab1, tab2 = st.tabs(["📈 Monitoring Real-Time", "🧪 Lab Simulasi Sidang"])
-
-with tab1:
+# --- FUNGSI DATABASE ---
+def get_data():
     try:
         conn = psycopg2.connect(DB_URL)
-        df = pd.read_sql_query("SELECT * FROM histori_harian ORDER BY tanggal DESC LIMIT 7", conn)
+        query = "SELECT created_at, rain_tuk, rain_btr, rh_tuk_avg, rh_btr_avg, prediksi FROM histori_harian ORDER BY created_at DESC LIMIT 50"
+        df = pd.read_sql(query, conn)
         conn.close()
-        
-        if not df.empty:
-            st.subheader("Tren Curah Hujan 7 Hari Terakhir")
-            fig = px.line(df, x='tanggal', y=['rain_tuk', 'rain_btr'], markers=True)
-            st.plotly_chart(fig, use_container_width=True)
-            st.dataframe(df)
-        else:
-            st.info("Menunggu data otomatis ditarik dari Cloud...")
-    except:
-        st.error("Gagal terhubung ke Database Supabase.")
+        return df
+    except Exception as e:
+        st.error(f"Gagal terhubung ke Database Supabase: {e}")
+        return pd.DataFrame()
 
-with tab2:
-    st.header("Simulasi Model Random Forest")
-    col1, col2 = st.columns(2)
-    with col1:
-        s_rt = st.number_input("Hujan Tukka (mm)", 0.0, 500.0, 10.0)
-        s_at = st.number_input("Acc 3 Hari Tukka (mm)", 0.0, 1000.0, 30.0)
-        s_rht = st.slider("RH Tukka (%)", 0, 100, 80)
-    with col2:
-        s_rb = st.number_input("Hujan BTR (mm)", 0.0, 500.0, 5.0)
-        s_ab = st.number_input("Acc 3 Hari BTR (mm)", 0.0, 1000.0, 15.0)
-        s_rhb = st.slider("RH BTR (%)", 0, 100, 75)
+# --- FUNGSI TELEGRAM ---
+def send_telegram(pesan):
+    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+    payload = {"chat_id": CHAT_ID, "text": pesan, "parse_mode": "Markdown"}
+    requests.post(url, json=payload)
+
+# --- UI DASHBOARD ---
+st.title("🌊 Dashboard EWS Banjir Tapanuli Tengah")
+st.markdown("Sistem Monitoring dan Prediksi Banjir berbasis Machine Learning.")
+
+tab1, tab2 = st.tabs(["📊 Monitoring Real-Time", "🧪 Lab Simulasi Sidang"])
+
+# --- TAB 1: MONITORING REAL-TIME ---
+with tab1:
+    df_data = get_data()
     
+    if not df_data.empty:
+        # Metrik Utama (Data Terakhir)
+        latest = df_data.iloc[0]
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.metric("Curah Hujan Tukka", f"{latest['rain_tuk']} mm")
+        with col2:
+            st.metric("Curah Hujan Batang Toru", f"{latest['rain_btr']} mm")
+        with col3:
+            status_color = "🔴" if latest['prediksi'] == "TINGGI" else "🟢"
+            st.metric("Status Prediksi", f"{status_color} {latest['prediksi']}")
+
+        st.subheader("Riwayat Data Terakhir")
+        st.dataframe(df_data, use_container_width=True)
+        
+        # Grafik Sederhana
+        st.subheader("Tren Curah Hujan")
+        st.line_chart(df_data.set_index('created_at')[['rain_tuk', 'rain_btr']])
+    else:
+        st.warning("Belum ada data di database. Pastikan worker.py sudah berjalan di GitHub Actions.")
+
+# --- TAB 2: LAB SIMULASI SIDANG ---
+with tab2:
+    st.header("🧪 Simulasi Input Model AI")
+    st.info("Gunakan bagian ini untuk mendemonstrasikan cara kerja model AI di depan dosen penguji.")
+
+    col_a, col_b = st.columns(2)
+    with col_a:
+        in_tukka = st.number_input("Input Curah Hujan Tukka (mm)", min_value=0.0, step=0.1)
+        in_hum_tukka = st.number_input("Input Kelembapan Tukka (%)", min_value=0.0, max_value=100.0, value=80.0)
+    with col_b:
+        in_btoru = st.number_input("Input Curah Hujan Batang Toru (mm)", min_value=0.0, step=0.1)
+        in_hum_btoru = st.number_input("Input Kelembapan Batang Toru (%)", min_value=0.0, max_value=100.0, value=80.0)
+
     if st.button("Jalankan Prediksi Simulasi"):
-        model = joblib.load('model_banjir_tapteng_final.pkl')
-        le = joblib.load('label_encoder_final.pkl')
-        
-        r_max = max(s_rt, s_rb)
-        rh_max = max(s_rht, s_rhb)
-        
-        # Logika Pengaman Ekstrem
-        if r_max >= 50 and rh_max >= 90:
-            res = "TINGGI"
-            st.error(f"HASIL: {res} (Picu Pengaman Ekstrem)")
-        else:
-            feat = np.array([[s_rt, s_at, s_rht, s_rb, s_ab, s_rhb, rh_max, r_max, max(s_at, s_ab), rh_max]])
-            res = le.inverse_transform(model.predict(feat))[0]
-            st.success(f"HASIL PREDIKSI MODEL: {res}")
+        try:
+            # Load Model
+            model = joblib.load('model_banjir_tapteng_final.pkl')
+            encoder = joblib.load('label_encoder_final.pkl')
+            
+            # Predict
+            features = pd.DataFrame([[in_tukka, in_btoru, in_hum_tukka, in_hum_btoru]], 
+                                   columns=['curah_hujan_tukka', 'curah_hujan_batangtoru', 'hum_tukka', 'hum_batangtoru'])
+            res_num = model.predict(features)
+            res_label = encoder.inverse_transform(res_num)[0]
+            
+            # Tampilkan Hasil
+            if res_label == "TINGGI":
+                st.error(f"### HASIL PREDIKSI: {res_label}")
+                # Kirim ke Telegram jika status TINGGI
+                msg = (
+                    f"🚨 *SIMULASI BANJIR TAPTENG*\n"
+                    f"Status: *{res_label}*\n"
+                    f"Tukka: {in_tukka}mm | B.Toru: {in_btoru}mm\n"
+                    f"Notifikasi ini dikirim otomatis oleh sistem simulasi."
+                )
+                send_telegram(msg)
+                st.success("✅ Notifikasi peringatan telah dikirim ke Telegram!")
+            else:
+                st.success(f"### HASIL PREDIKSI: {res_label}")
+                st.info("Status AMAN/RENDAH. Tidak ada notifikasi yang dikirim.")
+                
+        except Exception as e:
+            st.error(f"Gagal menjalankan simulasi: {e}")
+            st.info("Pastikan file .pkl sudah di-upload ke GitHub.")
