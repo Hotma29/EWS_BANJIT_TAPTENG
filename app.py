@@ -5,19 +5,25 @@ import joblib
 import requests
 from datetime import datetime
 
-# --- CONFIG DASHBOARD ---
+# --- 1. CONFIG DASHBOARD ---
 st.set_page_config(page_title="EWS Banjir Tapteng", page_icon="🌊", layout="wide")
 
-# --- LOAD SECRETS (Streamlit Cloud) ---
+# --- 2. LOAD SECRETS (PASTIKAN SUDAH DIISI DI STREAMLIT CLOUD) ---
+# Gunakan URI dari Session Pooler (port 6543) agar stabil
 DB_URL = st.secrets["SUPABASE_DB_URL"]
 TELEGRAM_TOKEN = st.secrets["TELEGRAM_BOT_TOKEN"]
 CHAT_ID = st.secrets["TELEGRAM_CHANNEL_ID"]
 
-# --- FUNGSI DATABASE (Hanya untuk Tab Monitoring) ---
+# --- 3. FUNGSI DATABASE (UNTUK MONITORING) ---
 def get_data():
     try:
         conn = psycopg2.connect(DB_URL)
-        query = "SELECT created_at, rain_tuk, rain_btr, rh_tuk_avg, rh_btr_avg, prediksi FROM histori_harian ORDER BY created_at DESC LIMIT 50"
+        # Menarik 50 data terbaru dari tabel histori_harian
+        query = """
+        SELECT created_at, rain_tuk, rain_btr, rh_tuk_avg, rh_btr_avg, prediksi 
+        FROM histori_harian 
+        ORDER BY created_at DESC LIMIT 50
+        """
         df = pd.read_sql(query, conn)
         conn.close()
         return df
@@ -25,93 +31,120 @@ def get_data():
         st.error(f"Gagal terhubung ke Database: {e}")
         return pd.DataFrame()
 
-# --- FUNGSI TELEGRAM ---
+# --- 4. FUNGSI NOTIFIKASI TELEGRAM ---
 def send_telegram(pesan):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     payload = {"chat_id": CHAT_ID, "text": pesan, "parse_mode": "Markdown"}
-    requests.post(url, json=payload)
+    try:
+        requests.post(url, json=payload)
+    except Exception as e:
+        st.warning(f"Gagal mengirim Telegram: {e}")
 
-# --- UI UTAMA ---
+# --- 5. UI UTAMA ---
 st.title("🌊 Dashboard EWS Banjir Tapanuli Tengah")
+st.markdown("Sistem Peringatan Dini Berbasis Machine Learning untuk Wilayah Hulu.")
 st.markdown("---")
 
 tab1, tab2 = st.tabs(["📊 Monitoring Real-Time", "🧪 Lab Simulasi Sidang"])
 
-# --- TAB 1: MONITORING (Menampilkan data dari Database) ---
+# --- TAB 1: MONITORING REAL-TIME ---
 with tab1:
     df_data = get_data()
     if not df_data.empty:
         latest = df_data.iloc[0]
-        c1, c2, c3, c4 = st.columns(4)
-        with c1: st.metric("Hujan Tukka", f"{latest['rain_tuk']} mm")
-        with c2: st.metric("Hujan B. Toru", f"{latest['rain_btr']} mm")
-        with c3: st.metric("RH Terakhir", f"{latest['rh_tuk_avg']} %")
-        with c4: 
-            st.metric("Status Prediksi", latest['prediksi'])
         
-        st.subheader("Log Data Terakhir")
+        # Metrik Utama
+        m1, m2, m3, m4 = st.columns(4)
+        with m1: st.metric("Hujan Tukka (Hulu)", f"{latest['rain_tuk']} mm")
+        with m2: st.metric("Hujan B. Toru (Hulu)", f"{latest['rain_btr']} mm")
+        with m3: 
+            avg_rh_now = (latest['rh_tuk_avg'] + latest['rh_btr_avg']) / 2
+            st.metric("Rata-rata rH", f"{avg_rh_now:.1f} %")
+        with m4:
+            warna = "🔴" if latest['prediksi'] == "TINGGI" else "🟢"
+            st.metric("Status Sistem", f"{warna} {latest['prediksi']}")
+        
+        st.subheader("Data Log Historis (Worker GitHub)")
         st.dataframe(df_data, use_container_width=True)
     else:
-        st.info("Menunggu data masuk dari worker GitHub...")
+        st.info("Menunggu data masuk dari GitHub Actions. Silakan klik 'Run Workflow' di GitHub.")
 
-# --- TAB 2: SIMULASI (INPUT MANUAL & TIDAK MASUK DATABASE) ---
+# --- TAB 2: LAB SIMULASI SIDANG (KONSISTEN DATASET) ---
 with tab2:
-    st.header("🧪 Simulasi Input Model AI (Demo Mode)")
-    st.write("Input data di bawah ini hanya untuk pengujian model. Data **TIDAK** akan disimpan ke database.")
+    st.header("🧪 Simulasi Prediksi Model AI")
+    st.write("Input data secara manual untuk mendemonstrasikan logika prediksi model tanpa menyimpan ke database.")
 
     with st.container(border=True):
         col1, col2, col3 = st.columns(3)
         
         with col1:
-            st.subheader("📍 Data Hujan")
-            sim_rain_tukka = st.number_input("Hujan Tukka (mm)", min_value=0.0, step=1.0)
-            sim_rain_btoru = st.number_input("Hujan Batang Toru (mm)", min_value=0.0, step=1.0)
+            st.subheader("📍 Hujan Saat Ini")
+            s_rain_tuk = st.number_input("Hujan Tukka (mm)", min_value=0.0, step=0.1, value=100.0)
+            s_rain_btr = st.number_input("Hujan B. Toru (mm)", min_value=0.0, step=0.1, value=5.0)
         
         with col2:
-            st.subheader("📍 Data Kelembapan (rH)")
-            sim_rh_tukka = st.number_input("rH Tukka (%)", min_value=0.0, max_value=100.0, value=80.0)
-            sim_rh_btoru = st.number_input("rH Batang Toru (%)", min_value=0.0, max_value=100.0, value=80.0)
+            st.subheader("📍 Kelembapan (rH)")
+            s_rh_tuk = st.number_input("rH Tukka (%)", min_value=0.0, max_value=100.0, value=90.0)
+            s_rh_btr = st.number_input("rH B. Toru (%)", min_value=0.0, max_value=100.0, value=85.0)
 
         with col3:
-            st.subheader("📍 Faktor Akumulasi")
-            # Ini input manual tambahan yang Abang minta
-            sim_akumulasi_3hr = st.number_input("Akumulasi Hujan 3 Hari (mm)", min_value=0.0, step=1.0, help="Total hujan dalam 3 hari terakhir")
+            st.subheader("📍 Akumulasi 3 Hari")
+            s_rain3_tuk = st.number_input("Akumulasi Tukka (mm)", min_value=0.0, step=0.1, value=30.0)
+            s_rain3_btr = st.number_input("Akumulasi B. Toru (mm)", min_value=0.0, step=0.1, value=15.0)
 
-    # Tombol Prediksi
-    if st.button("🚀 Jalankan Simulasi & Kirim Notifikasi"):
+    # --- PROSES FEATURE ENGINEERING (Sesuai Logika Dataset Latih) ---
+    max_rain_t = max(s_rain_tuk, s_rain_btr)
+    max_rain3 = max(s_rain3_tuk, s_rain3_btr)
+    max_rh = max(s_rh_tuk, s_rh_btr)
+    rh_avg_sim = (s_rh_tuk + s_rh_btr) / 2
+
+    # Tampilkan Ringkasan untuk Dosen
+    st.markdown("### 📊 Parameter Hasil Hitung (Features)")
+    k1, k2, k3, k4 = st.columns(4)
+    k1.info(f"**MAX_RAIN_T:** {max_rain_t} mm")
+    k2.info(f"**MAX_RAIN3:** {max_rain3} mm")
+    k3.info(f"**MAX_RH:** {max_rh} %")
+    k4.info(f"**RH_AVG:** {rh_avg_sim:.1f} %")
+
+    if st.button("🚀 Jalankan Prediksi AI & Demo Notifikasi"):
         try:
-            # 1. Load Model
+            # Load Model & Encoder
             model = joblib.load('model_banjir_tapteng_final.pkl')
             encoder = joblib.load('label_encoder_final.pkl')
 
-            # 2. Siapkan Data Input
-            # Catatan: Pastikan urutan & jumlah kolom ini sama dengan saat Abang melatih model (training).
-            # Jika model Abang tidak pakai kolom 'akumulasi', hapus dari list columns di bawah.
-            data_input = pd.DataFrame([[sim_rain_tukka, sim_rain_btoru, sim_rh_tukka, sim_rh_btoru]], 
-                                     columns=['curah_hujan_tukka', 'curah_hujan_batangtoru', 'hum_tukka', 'hum_batangtoru'])
+            # Menyiapkan DataFrame dengan urutan dan nama kolom yang PERSIS dengan data latih
+            # Berdasarkan Error: MAX_RAIN3, MAX_RAIN_T, MAX_RH, RAIN3_BTR, RAIN3_TUKKA
+            input_df = pd.DataFrame([[
+                max_rain3, 
+                max_rain_t, 
+                max_rh, 
+                s_rain3_btr, 
+                s_rain3_tuk
+            ]], columns=['MAX_RAIN3', 'MAX_RAIN_T', 'MAX_RH', 'RAIN3_BTR', 'RAIN3_TUKKA'])
             
-            # 3. Eksekusi Prediksi AI
-            res_num = model.predict(data_input)
+            # Prediksi
+            res_num = model.predict(input_df)
             res_label = encoder.inverse_transform(res_num)[0]
 
-            # 4. Tampilkan Hasil di Layar
             st.markdown("---")
             if res_label == "TINGGI":
-                st.error(f"### HASIL SIMULASI: {res_label}")
-                # Kirim ke Telegram
-                pesan = (
-                    f"⚠️ *DEMO SIMULASI TINGGI*\n"
-                    f"Hujan Hulu: {sim_rain_tukka + sim_rain_btoru} mm\n"
-                    f"Akumulasi 3 Hari: {sim_akumulasi_3hr} mm\n"
-                    f"Status: *SIAGA BANJIR*"
+                st.error(f"## HASIL PREDIKSI: {res_label} (BAHAYA)")
+                # Demo Notifikasi Telegram
+                msg = (
+                    f"🚨 *SIMULASI EWS TAPTENG*\n"
+                    f"Status: *{res_label}*\n"
+                    f"Max Hujan: {max_rain_t} mm\n"
+                    f"Akumulasi 3H: {max_rain3} mm\n"
+                    f"RH Avg: {rh_avg_sim:.1f} %"
                 )
-                send_telegram(pesan)
-                st.success("✅ Notifikasi simulasi berhasil dikirim ke Telegram!")
+                send_telegram(msg)
+                st.success("✅ Pesan peringatan simulasi telah dikirim ke Telegram!")
             else:
-                st.success(f"### HASIL SIMULASI: {res_label}")
-                st.info("Status Aman. Notifikasi Telegram tidak dikirim.")
+                st.success(f"## HASIL PREDIKSI: {res_label} (AMAN)")
+                st.info("Kondisi di bawah ambang batas bahaya. Notifikasi tidak dikirim.")
             
-            st.caption("Peringatan: Data di atas hanya simulasi dan tidak disimpan di tabel histori_harian.")
+            st.caption("Catatan: Data simulasi ini tidak disimpan ke database Supabase.")
 
         except Exception as e:
-            st.error(f"Gagal melakukan simulasi: {e}")
+            st.error(f"Gagal menjalankan simulasi: {e}")
+            st.info("Tips: Pastikan file .pkl sudah di-upload ke repository GitHub.")
