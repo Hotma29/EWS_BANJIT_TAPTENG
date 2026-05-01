@@ -9,16 +9,16 @@ from datetime import datetime
 st.set_page_config(page_title="EWS Banjir Tapteng", page_icon="🌊", layout="wide")
 
 # --- 2. LOAD SECRETS (PASTIKAN SUDAH DIISI DI STREAMLIT CLOUD) ---
-# Gunakan URI dari Session Pooler (port 6543) agar stabil
+# Gunakan URI dari Session Pooler (port 6543) di Secrets agar koneksi stabil
 DB_URL = st.secrets["SUPABASE_DB_URL"]
 TELEGRAM_TOKEN = st.secrets["TELEGRAM_BOT_TOKEN"]
 CHAT_ID = st.secrets["TELEGRAM_CHANNEL_ID"]
 
-# --- 3. FUNGSI DATABASE (UNTUK MONITORING) ---
+# --- 3. FUNGSI DATABASE (UNTUK TAB MONITORING) ---
 def get_data():
     try:
         conn = psycopg2.connect(DB_URL)
-        # Menarik 50 data terbaru dari tabel histori_harian
+        # Menarik data dari tabel histori_harian yang diisi oleh worker.py
         query = """
         SELECT created_at, rain_tuk, rain_btr, rh_tuk_avg, rh_btr_avg, prediksi 
         FROM histori_harian 
@@ -38,7 +38,7 @@ def send_telegram(pesan):
     try:
         requests.post(url, json=payload)
     except Exception as e:
-        st.warning(f"Gagal mengirim Telegram: {e}")
+        st.warning(f"Gagal mengirim notifikasi Telegram: {e}")
 
 # --- 5. UI UTAMA ---
 st.title("🌊 Dashboard EWS Banjir Tapanuli Tengah")
@@ -64,15 +64,15 @@ with tab1:
             warna = "🔴" if latest['prediksi'] == "TINGGI" else "🟢"
             st.metric("Status Sistem", f"{warna} {latest['prediksi']}")
         
-        st.subheader("Data Log Historis (Worker GitHub)")
+        st.subheader("Data Log Historis (Dari Worker GitHub)")
         st.dataframe(df_data, use_container_width=True)
     else:
-        st.info("Menunggu data masuk dari GitHub Actions. Silakan klik 'Run Workflow' di GitHub.")
+        st.info("Menunggu data masuk dari GitHub Actions. Pastikan 'Run Workflow' sudah dijalankan.")
 
-# --- TAB 2: LAB SIMULASI SIDANG (KONSISTEN DATASET) ---
+# --- TAB 2: LAB SIMULASI SIDANG (KONSISTEN DENGAN DATASET) ---
 with tab2:
-    st.header("🧪 Simulasi Prediksi Model AI")
-    st.write("Input data secara manual untuk mendemonstrasikan logika prediksi model tanpa menyimpan ke database.")
+    st.header("🧪 Simulasi Prediksi Model AI (Demo Mode)")
+    st.write("Input data manual di bawah ini disinkronkan dengan fitur pada dataset latih.")
 
     with st.container(border=True):
         col1, col2, col3 = st.columns(3)
@@ -92,35 +92,44 @@ with tab2:
             s_rain3_tuk = st.number_input("Akumulasi Tukka (mm)", min_value=0.0, step=0.1, value=30.0)
             s_rain3_btr = st.number_input("Akumulasi B. Toru (mm)", min_value=0.0, step=0.1, value=15.0)
 
-    # --- PROSES FEATURE ENGINEERING (Sesuai Logika Dataset Latih) ---
+    # --- PROSES FEATURE ENGINEERING (Sesuai Struktur Dataset Latih) ---
+    # Menghitung Fitur Agregat
     max_rain_t = max(s_rain_tuk, s_rain_btr)
     max_rain3 = max(s_rain3_tuk, s_rain3_btr)
     max_rh = max(s_rh_tuk, s_rh_btr)
     rh_avg_sim = (s_rh_tuk + s_rh_btr) / 2
 
-    # Tampilkan Ringkasan untuk Dosen
-    st.markdown("### 📊 Parameter Hasil Hitung (Features)")
+    # Tampilkan Ringkasan Fitur untuk Dosen
+    st.markdown("### 📊 Parameter Input Model (Features)")
     k1, k2, k3, k4 = st.columns(4)
-    k1.info(f"**MAX_RAIN_T:** {max_rain_t} mm")
-    k2.info(f"**MAX_RAIN3:** {max_rain3} mm")
-    k3.info(f"**MAX_RH:** {max_rh} %")
-    k4.info(f"**RH_AVG:** {rh_avg_sim:.1f} %")
+    k1.info(f"**Max Hujan:** {max_rain_t} mm")
+    k2.info(f"**Max Akumulasi:** {max_rain3} mm")
+    k3.info(f"**Max rH:** {max_rh} %")
+    k4.info(f"**RH Average:** {rh_avg_sim:.1f} %")
 
-    if st.button("🚀 Jalankan Prediksi AI & Demo Notifikasi"):
+    if st.button("🚀 Jalankan Prediksi AI & Kirim Telegram"):
         try:
             # Load Model & Encoder
             model = joblib.load('model_banjir_tapteng_final.pkl')
             encoder = joblib.load('label_encoder_final.pkl')
 
-            # Menyiapkan DataFrame dengan urutan dan nama kolom yang PERSIS dengan data latih
-            # Berdasarkan Error: MAX_RAIN3, MAX_RAIN_T, MAX_RH, RAIN3_BTR, RAIN3_TUKKA
+            # MAPPING DATA: Urutan dan Nama Kolom HARUS persis dengan dataset DATAKU_SMOTE_FINAL_MAX_2.xlsx
             input_df = pd.DataFrame([[
-                max_rain3, 
-                max_rain_t, 
-                max_rh, 
-                s_rain3_btr, 
-                s_rain3_tuk
-            ]], columns=['MAX_RAIN3', 'MAX_RAIN_T', 'MAX_RH', 'RAIN3_BTR', 'RAIN3_TUKKA'])
+                s_rain_tuk,      # RAIN_TUKKA
+                s_rain3_tuk,     # RAIN3_TUKKA
+                s_rh_tuk,        # RH_TUKKA
+                s_rain_btr,      # RAIN_BTR
+                s_rain3_btr,     # RAIN3_BTR
+                s_rh_btr,        # RHBTR
+                rh_avg_sim,      # RATA-RATA_RH
+                max_rain_t,      # MAX_RAIN_T
+                max_rain3,       # MAX_RAIN3
+                max_rh           # MAX_RH
+            ]], columns=[
+                'RAIN_TUKKA', 'RAIN3_TUKKA', 'RH_TUKKA', 'RAIN_BTR', 
+                'RAIN3_BTR', 'RHBTR', 'RATA-RATA_RH', 'MAX_RAIN_T', 
+                'MAX_RAIN3', 'MAX_RH'
+            ])
             
             # Prediksi
             res_num = model.predict(input_df)
@@ -129,22 +138,22 @@ with tab2:
             st.markdown("---")
             if res_label == "TINGGI":
                 st.error(f"## HASIL PREDIKSI: {res_label} (BAHAYA)")
-                # Demo Notifikasi Telegram
+                # Kirim Notifikasi Demo ke Telegram
                 msg = (
                     f"🚨 *SIMULASI EWS TAPTENG*\n"
                     f"Status: *{res_label}*\n"
                     f"Max Hujan: {max_rain_t} mm\n"
-                    f"Akumulasi 3H: {max_rain3} mm\n"
-                    f"RH Avg: {rh_avg_sim:.1f} %"
+                    f"Max Akumulasi 3H: {max_rain3} mm\n"
+                    f"Average RH: {rh_avg_sim:.1f} %"
                 )
                 send_telegram(msg)
-                st.success("✅ Pesan peringatan simulasi telah dikirim ke Telegram!")
+                st.success("✅ Notifikasi simulasi berhasil dikirim ke Telegram!")
             else:
                 st.success(f"## HASIL PREDIKSI: {res_label} (AMAN)")
-                st.info("Kondisi di bawah ambang batas bahaya. Notifikasi tidak dikirim.")
+                st.info("Kondisi masih dalam batas aman. Notifikasi tidak dikirim.")
             
-            st.caption("Catatan: Data simulasi ini tidak disimpan ke database Supabase.")
+            st.caption("Catatan: Data ini murni simulasi dan tidak disimpan ke database.")
 
         except Exception as e:
-            st.error(f"Gagal menjalankan simulasi: {e}")
-            st.info("Tips: Pastikan file .pkl sudah di-upload ke repository GitHub.")
+            st.error(f"Gagal melakukan simulasi: {e}")
+            st.info("Tips: Periksa apakah semua file .pkl sudah di-upload ke GitHub.")
