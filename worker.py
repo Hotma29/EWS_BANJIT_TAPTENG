@@ -2,74 +2,100 @@ import os
 import requests
 import psycopg2
 import joblib
-import numpy as np
+import pandas as pd
 from datetime import datetime
 
-# Ambil dari GitHub Secrets
+# Ambil Secret dari GitHub Actions
 API_KEY = os.getenv("OPENWEATHER_API_KEY")
-BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-CHANNEL_ID = os.getenv("TELEGRAM_CHANNEL_ID")
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+CHAT_ID = os.getenv("TELEGRAM_CHANNEL_ID")
 DB_URL = os.getenv("SUPABASE_DB_URL")
 
-LOCS = {"Tukka": {"lat": 1.72, "lon": 98.92}, "Batang Toru": {"lat": 1.55, "lon": 99.10}}
+# Koordinat Lokasi
+LOCS = {
+    "Tukka": {"lat": 1.7371, "lon": 98.8681},
+    "Batang Toru": {"lat": 1.5035, "lon": 99.0667}
+}
 
-def fetch_weather():
-    def get_data(lat, lon):
-        res = requests.get(f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={API_KEY}&units=metric").json()
-        return res.get('rain', {}).get('1h', 0.0), res['main']['humidity']
-    rt, rht = get_data(LOCS["Tukka"]["lat"], LOCS["Tukka"]["lon"])
-    rb, rhb = get_data(LOCS["Batang Toru"]["lat"], LOCS["Batang Toru"]["lon"])
-    return rt, rb, rht, rhb
+def get_weather_data(lat, lon):
+    """Mengambil data cuaca dengan penanganan error yang lebih kuat"""
+    url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={API_KEY}&units=metric"
+    try:
+        response = requests.get(url)
+        res = response.json()
+        
+        if response.status_code == 200:
+            # Mengambil curah hujan (jika ada, jika tidak 0.0)
+            rain = res.get('rain', {}).get('1h', 0.0)
+            # Mengambil kelembapan dengan aman
+            humidity = res.get('main', {}).get('humidity', 0)
+            return rain, humidity
+        else:
+            print(f"⚠️ API Error ({response.status_code}): {res.get('message', 'Unknown error')}")
+            return 0.0, 0
+    except Exception as e:
+        print(f"❌ Koneksi Error: {e}")
+        return 0.0, 0
 
-def update_db_and_get_features(rt, rb, rht, rhb):
-    conn = psycopg2.connect(DB_URL)
-    cur = conn.cursor()
-    tgl = datetime.now().strftime('%Y-%m-%d')
-    
-    # Update data harian
-    cur.execute("SELECT * FROM histori_harian WHERE tanggal = %s", (tgl,))
-    row = cur.fetchone()
-    if row:
-        new_count = row[5] + 1
-        cur.execute("UPDATE histori_harian SET rain_tuk=%s, rain_btr=%s, rh_tuk_avg=%s, rh_btr_avg=%s, entry_count=%s WHERE tanggal=%s",
-                    (row[1]+rt, row[2]+rb, ((row[3]*row[5])+rht)/new_count, ((row[4]*row[5])+rhb)/new_count, new_count, tgl))
-    else:
-        cur.execute("INSERT INTO histori_harian VALUES (%s, %s, %s, %s, %s, 1)", (tgl, rt, rb, rht, rhb))
-    conn.commit()
-    
-    # Ambil data 3 hari terakhir untuk fitur AI
-    cur.execute("SELECT rain_tuk, rain_btr, rh_tuk_avg, rh_btr_avg FROM histori_harian ORDER BY tanggal DESC LIMIT 3")
-    rows = cur.fetchall()
-    conn.close()
-    return rows
+def send_telegram(message):
+    """Mengirim notifikasi ke Telegram Channel"""
+    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+    payload = {"chat_id": CHAT_ID, "text": message, "parse_mode": "Markdown"}
+    try:
+        requests.post(url, json=payload)
+    except Exception as e:
+        print(f"⚠️ Gagal kirim Telegram: {e}")
 
-def run_prediction(rows):
-    if len(rows) < 1: return
-    last = rows[0]
-    acc3_t, acc3_b = sum(r[0] for r in rows), sum(r[1] for r in rows)
-    rh_max = max(last[2], last[3])
-    rain_max = max(last[0], last[1])
+def run_worker():
+    # 1. Ambil data cuaca terbaru
+    rt, rht = get_weather_data(LOCS["Tukka"]["lat"], LOCS["Tukka"]["lon"])
+    rb, rhb = get_weather_data(LOCS["Batang Toru"]["lat"], LOCS["Batang Toru"]["lon"])
     
-    # Logika Pengaman Ekstrem (Hard Limit)
-    if rain_max >= 50 and rh_max >= 90:
-        res = "TINGGI"
-    else:
-        # Gunakan Model Random Forest
+    print(f"Data Terambil: Tukka={rt}mm, Batang Toru={rb}mm")
+
+    # 2. Load Model AI
+    try:
         model = joblib.load('model_banjir_tapteng_final.pkl')
-        le = joblib.load('label_encoder_final.pkl')
-        feat = np.array([[last[0], acc3_t, last[2], last[1], acc3_b, last[3], rh_max, rain_max, max(acc3_t, acc3_b), rh_max]])
-        res = le.inverse_transform(model.predict(feat))[0]
+        encoder = joblib.load('label_encoder_final.pkl')
+    except Exception as e:
+        print(f"❌ Gagal load model: {e}")
+        return
+
+    # 3. Prediksi
+    # Sesuaikan urutan kolom dengan training model Abang
+    input_data = pd.DataFrame([[rt, rb, rht, rhb]], 
+                             columns=['curah_hujan_tukka', 'curah_hujan_batangtoru', 'hum_tukka', 'hum_batangtoru'])
     
-    if res == "TINGGI":
-        msg = (f"🚨 *PERINGATAN DINI BANJIR TAPTENG* 🚨\n\nStatus: *TINGGI (SIAGA)*\n"
-               f"📍 Hulu Tukka: Hujan {last[0]}mm, Acc3 {acc3_t}mm\n"
-               f"📍 Hulu BTR: Hujan {last[1]}mm, Acc3 {acc3_b}mm\n"
-               f"💧 Kelembapan Max: {rh_max}%\n\n"
-               f"⚠️ Kondisi berpotensi banjir. SEGERA SIAGA!")
-        requests.get(f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage", 
-                     params={"chat_id": CHANNEL_ID, "text": msg, "parse_mode": "Markdown"})
+    prediction_numeric = model.predict(input_data)
+    prediction_label = encoder.inverse_transform(prediction_numeric)[0]
+
+    # 4. Simpan ke Supabase
+    try:
+        conn = psycopg2.connect(DB_URL)
+        cur = conn.cursor()
+        query = """
+            INSERT INTO histori_harian (tanggal, curah_hujan_tukka, curah_hujan_batangtoru, prediksi)
+            VALUES (%s, %s, %s, %s)
+        """
+        cur.execute(query, (datetime.now(), rt, rb, prediction_label))
+        conn.commit()
+        cur.close()
+        conn.close()
+        print("✅ Data berhasil disimpan ke Supabase")
+    except Exception as e:
+        print(f"❌ Gagal simpan ke DB: {e}")
+
+    # 5. Kirim Notifikasi jika Bahaya
+    if prediction_label.upper() == "TINGGI":
+        msg = (
+            f"⚠️ *PERINGATAN DINI BANJIR TAPTENG*\n\n"
+            f"Status: *TINGGI*\n"
+            f"Curah Hujan Tukka: {rt} mm\n"
+            f"Curah Hujan Batang Toru: {rb} mm\n"
+            f"Waktu: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n\n"
+            f"Harap waspada bagi warga di sekitar aliran sungai!"
+        )
+        send_telegram(msg)
 
 if __name__ == "__main__":
-    rt, rb, rht, rhb = fetch_weather()
-    data_rows = update_db_and_get_features(rt, rb, rht, rhb)
-    run_prediction(data_rows)
+    run_worker()
