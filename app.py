@@ -1,120 +1,98 @@
 import streamlit as st
 import pandas as pd
+import plotly.express as px
 import psycopg2
-import joblib
+import os
 import requests
-import pytz # Untuk konversi waktu ke WIB
+import joblib
+import numpy as np
 
-# --- 1. CONFIG & SECRETS ---
-st.set_page_config(page_title="EWS Banjir Tapteng", page_icon="🌊", layout="wide")
-DB_URL = st.secrets["SUPABASE_DB_URL"]
-TELEGRAM_TOKEN = st.secrets["TELEGRAM_BOT_TOKEN"]
-CHAT_ID = st.secrets["TELEGRAM_CHANNEL_ID"]
+DB_URL = os.getenv("SUPABASE_DB_URL")
+API_KEY = os.getenv("OPENWEATHER_API_KEY")
 
-# --- 2. FUNGSI DATABASE & KONVERSI WAKTU ---
-def get_data():
+st.set_page_config(page_title="EWS BANJIR TAPTENG", layout="wide")
+
+# --- SIDEBAR: TOMBOL LIVE TEST ---
+with st.sidebar:
+    st.title("⚙️ Panel Kontrol")
+    if st.button("🔄 Tarik Data API (Live Test)"):
+        # Hanya monitoring, TIDAK simpan ke DB
+        res_t = requests.get(f"https://api.openweathermap.org/data/2.5/weather?lat=1.72&lon=98.92&appid={API_KEY}&units=metric").json()
+        res_b = requests.get(f"https://api.openweathermap.org/data/2.5/weather?lat=1.55&lon=99.10&appid={API_KEY}&units=metric").json()
+        
+        st.success("Koneksi API Berhasil!")
+        st.write(f"**Tukka:** {res_t.get('rain',{}).get('1h',0)}mm | {res_t['main']['humidity']}%")
+        st.write(f"**BTR:** {res_b.get('rain',{}).get('1h',0)}mm | {res_b['main']['humidity']}%")
+        st.caption("Data ini hanya tampilan sementara (tidak masuk database).")
+
+# --- MAIN DASHBOARD ---
+tab1, tab2 = st.tabs(["📊 Real-Time Monitoring", "🧪 Mode Simulasi (Demo AI)"])
+
+# --- TAB 1: MONITORING ---
+with tab1:
+    st.title("🌊 Monitoring Banjir Tapanuli Tengah")
     try:
         conn = psycopg2.connect(DB_URL)
-        query = "SELECT * FROM histori_harian ORDER BY created_at DESC LIMIT 50"
-        df = pd.read_sql(query, conn)
+        df = pd.read_sql_query("SELECT * FROM histori_harian ORDER BY tanggal DESC LIMIT 7", conn)
         conn.close()
-        
-        # KONVERSI JAM KE WIB
+
         if not df.empty:
-            df['created_at'] = pd.to_datetime(df['created_at']).dt.tz_convert('Asia/Jakarta')
-            df['created_at'] = df['created_at'].dt.strftime('%Y-%m-%d %H:%M:%S')
-        return df
-    except Exception as e:
-        st.error(f"Koneksi Database Gagal: {e}")
-        return pd.DataFrame()
+            now = df.iloc[0]
+            c1, c2, c3 = st.columns(3)
+            status_color = "red" if now['prediksi'] == "TINGGI" else "green"
+            c1.markdown(f"### Status Terkini: :{status_color}[{now['prediksi']}]")
+            c2.metric("Total Hujan Hari Ini", f"{max(now['rain_tuk'], now['rain_btr'])} mm")
+            c3.metric("Data Masuk", f"{int(now['entry_count'])} Jam")
 
-def send_telegram(pesan):
-    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-    requests.post(url, json={"chat_id": CHAT_ID, "text": pesan, "parse_mode": "Markdown"})
+            # BAR CHART: Hari Ini vs Hari Sebelumnya
+            st.subheader("📈 Akumulasi Curah Hujan Harian")
+            df_plot = df.head(3).copy()
+            df_plot['Hujan_Max'] = df_plot.apply(lambda x: max(x['rain_tuk'], x['rain_btr']), axis=1)
+            df_plot = df_plot.sort_values('tanggal')
+            
+            fig = px.bar(df_plot, x='tanggal', y='Hujan_Max', 
+                         title="Perbandingan Total Hujan (mm)", text_auto=True,
+                         color='Hujan_Max', color_continuous_scale='Blues')
+            st.plotly_chart(fig, use_container_width=True)
+    except:
+        st.error("Gagal memuat data monitoring.")
 
-# --- 3. UI DASHBOARD ---
-st.title("🌊 Dashboard EWS Banjir Tapanuli Tengah")
-st.markdown("---")
-
-tab1, tab2 = st.tabs(["📊 Monitoring Real-Time", "🧪 Lab Simulasi Sidang"])
-
-# --- TAB 1: MONITORING (DIPERBARUI) ---
-with tab1:
-    df_data = get_data()
-    if not df_data.empty:
-        latest = df_data.iloc[0]
-        
-        # Hitung Faktor MAX Secara Real-Time
-        max_rain_now = max(float(latest['rain_tuk']), float(latest['rain_btr']))
-        max_rh_now = max(float(latest['rh_tuk_avg']), float(latest['rh_btr_avg']))
-        
-        # METRIK UTAMA (Faktor Banjir)
-        st.subheader("⚠️ Parameter Kritis Saat Ini (Faktor Max)")
-        m1, m2, m3 = st.columns(3)
-        with m1: st.metric("Max Curah Hujan (Hulu)", f"{max_rain_now} mm")
-        with m2: st.metric("Max Kelembapan (rH)", f"{max_rh_now} %")
-        with m3:
-            warna = "🔴" if latest['prediksi'] == "TINGGI" else "🟢"
-            st.metric("Status Sistem", f"{warna} {latest['prediksi']}")
-
-        st.markdown("---")
-        st.subheader("📍 Detail Per Lokasi")
-        c1, c2, c3 = st.columns(3)
-        with c1: st.write(f"**Tukka (1.72, 98.92):** {latest['rain_tuk']} mm")
-        with c2: st.write(f"**B. Toru (1.55, 99.08):** {latest['rain_btr']} mm")
-        with c3: st.write(f"**Update Terakhir (WIB):** {latest['created_at']}")
-        
-        st.subheader("Log Riwayat Data (Waktu WIB)")
-        st.dataframe(df_data, use_container_width=True)
-    else:
-        st.info("Menunggu data masuk dari GitHub Actions...")
-
-# --- TAB 2: SIMULASI (TETAP SAMA) ---
+# --- TAB 2: SIMULASI (UNTUK DEMO SIDANG) ---
 with tab2:
-    st.header("🧪 Simulasi Prediksi (Aturan Pakar + AI)")
-    with st.container(border=True):
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            s_rain_tuk = st.number_input("Hujan Tukka (mm)", value=10.0)
-            s_rain_btr = st.number_input("Hujan B. Toru (mm)", value=5.0)
-        with col2:
-            s_rh_tuk = st.number_input("rH Tukka (%)", value=80.0)
-            s_rh_btr = st.number_input("rH B. Toru (%)", value=75.0)
-        with col3:
-            s_rain3_tuk = st.number_input("Akumulasi 3H Tukka (mm)", value=30.0)
-            s_rain3_btr = st.number_input("Akumulasi 3H B. Toru (mm)", value=25.0)
+    st.title("🧪 Laboratorium Simulasi Random Forest")
+    st.info("Gunakan mode ini untuk mendemonstrasikan cara kerja algoritma ke dosen penguji.")
+    
+    col_a, col_b = st.columns(2)
+    with col_a:
+        st.markdown("**Input Hulu Tukka**")
+        sim_rt = st.number_input("Hujan Jam Ini (mm)", 0.0, 200.0, 5.0, key="a1")
+        sim_at = st.number_input("Akumulasi 3 Hari (mm)", 0.0, 500.0, 120.0, key="a2")
+        sim_rht = st.slider("Kelembapan (%)", 0, 100, 85, key="a3")
+    with col_b:
+        st.markdown("**Input Hulu Batang Toru**")
+        sim_rb = st.number_input("Hujan Jam Ini (mm)", 0.0, 200.0, 2.0, key="b1")
+        sim_ab = st.number_input("Akumulasi 3 Hari (mm)", 0.0, 500.0, 40.0, key="b2")
+        sim_rhb = st.slider("Kelembapan (%)", 0, 100, 70, key="b3")
 
-    # Feature Engineering Otomatis
-    max_rain_t = max(s_rain_tuk, s_rain_btr)
-    max_rain3 = max(s_rain3_tuk, s_rain3_btr)
-    max_rh = max(s_rh_tuk, s_rh_btr)
-    rh_avg = (s_rh_tuk + s_rh_btr) / 2
-
-    if st.button("🚀 Jalankan Prediksi"):
-        try:
-            if max_rain_t >= 50 and max_rh >= 90:
-                res_label = "TINGGI"
-                metode = "Override (Kondisi Ekstrem)"
-            else:
+    if st.button("🚀 JALANKAN PREDIKSI SIMULASI", type="primary", use_container_width=True):
+        # Hitung parameter Max untuk simulasi
+        s_rain_max = max(sim_rt, sim_rb)
+        s_acc_max = max(sim_at, sim_ab)
+        s_rh_max = max(sim_rht, sim_rhb)
+        
+        # 1. Cek Guardrail (Logika AND Abang)
+        if (s_rain_max >= 50) and s_rh_max >= 90:
+            final_res = "TINGGI (Trigger: Guardrail Ekstrem)"
+        else:
+            # 2. Panggil AI
+            try:
                 model = joblib.load('model_banjir_tapteng_final.pkl')
-                encoder = joblib.load('label_encoder_final.pkl')
-                input_df = pd.DataFrame([[
-                    s_rain_tuk, s_rain3_tuk, s_rh_tuk, s_rain_btr, 
-                    s_rain3_btr, s_rh_btr, rh_avg, max_rain_t, max_rain3, max_rh
-                ]], columns=['RAIN_TUKKA', 'RAIN3_TUKKA', 'RH_TUKKA', 'RAIN_BTR', 
-                            'RAIN3_BTR', 'RHBTR', 'RATA-RATA_RH', 'MAX_RAIN_T', 
-                            'MAX_RAIN3', 'MAX_RH'])
-                res_num = model.predict(input_df)
-                res_label = encoder.inverse_transform(res_num)[0]
-                metode = "Random Forest AI"
-
-            st.divider()
-            st.subheader(f"Hasil: {res_label}")
-            st.caption(f"Metode: {metode}")
-            if res_label == "TINGGI":
-                st.error("⚠️ STATUS SIAGA BANJIR!")
-                send_telegram(f"🚨 SIMULASI: TINGGI!\nMetode: {metode}\nHujan: {max_rain_t}mm\nRH: {max_rh}%")
-            else:
-                st.success("✅ Kondisi Aman")
-        except Exception as e:
-            st.error(f"Error: {e}")
+                le = joblib.load('label_encoder_final.pkl')
+                # Susun 10 Fitur
+                s_feat = np.array([[sim_rt, sim_at, sim_rht, sim_rb, sim_ab, sim_rhb, 
+                                    s_rh_max, s_rain_max, s_acc_max, s_rh_max]])
+                final_res = le.inverse_transform(model.predict(s_feat))[0] + " (Berdasarkan Random Forest)"
+            except:
+                final_res = "Gagal memuat model .pkl"
+        
+        st.subheader(f"Hasil Prediksi: {final_res}")
