@@ -1,7 +1,6 @@
 pandas
 numpy
 psycopg2-binary
-sqlalchemy
 joblib
 scikit-learn
 requests
