@@ -1,9 +1,8 @@
-streamlit
 pandas
 numpy
-joblib
-requests
 psycopg2-binary
-plotly
+sqlalchemy
+joblib
 scikit-learn==1.6.1
-pytz
+requests
+plotly
