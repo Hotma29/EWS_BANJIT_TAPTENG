@@ -1,27 +1,23 @@
 name: Auto Weather Fetcher
 on:
   schedule:
-    - cron: '0 * * * *' # Berjalan otomatis setiap jam
-  workflow_dispatch: # Tombol manual untuk testing
+    - cron: '0 * * * *'
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4 # Update ke v4 (lebih stabil & cepat)
-
+        uses: actions/checkout@v4
       - name: Set up Python
-        uses: actions/setup-python@v4 # Update ke v4
+        uses: actions/setup-python@v4
         with:
           python-version: '3.9'
-
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
-          # PENTING: Pin scikit-learn ke versi 1.6.1 sesuai versi saat training model final
-          pip install pandas requests psycopg2-binary joblib scikit-learn==1.6.1
-
+          pip install -r requirements.txt
       - name: Run Worker
         env:
           OPENWEATHER_API_KEY: ${{ secrets.OPENWEATHER_API_KEY }}
