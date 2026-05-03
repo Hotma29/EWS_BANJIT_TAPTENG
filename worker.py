@@ -88,7 +88,7 @@ def run_system():
     # 6. PREDIKSI DENGAN MODEL TERBARU
     try:
         model = joblib.load('model_banjir_final.pkl')[cite: 1]
-        le = joblib.load('label_encoder_final_2.pkl')[cite: 2]
+        le = joblib.load('label_encoder_final.pkl')[cite: 2]
         
         pred_numeric = model.predict(input_data)
         status = le.inverse_transform(pred_numeric)[0][cite: 2]
