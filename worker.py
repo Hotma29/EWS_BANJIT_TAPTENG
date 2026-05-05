@@ -93,8 +93,8 @@ def run_system():
 
     # 6. PREDIKSI MENGGUNAKAN AI
     try:
-        model = joblib.load('model_ews.pkl')
-        le = joblib.load('label_encoder_ews.pkl')
+        model = joblib.load('model_ews_tapteng.pkl')
+        le = joblib.load('label_encoder_ews_tapteng.pkl')
         
         pred_numeric = model.predict(input_data)
         status = le.inverse_transform(pred_numeric)[0]
