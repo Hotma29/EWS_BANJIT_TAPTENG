@@ -94,9 +94,9 @@ with tab1:
 
             # Metrik Utama
             c1, c2, c3, c4 = st.columns(4)
-            with c1: st.metric("Hujan Tukka (1j)", f"{latest['rain_tuk']} mm")
+            with c1: st.metric("Hujan Tukka (Total Hari Ini)", f"{latest['rain_tuk']} mm")
             with c2: st.metric("RH Tukka", f"{latest['rh_tuk_avg']:.1f}%")
-            with c3: st.metric("Hujan BTR (1j)", f"{latest['rain_btr']} mm")
+            with c3: st.metric("Hujan BTR (Total Hari Ini)", f"{latest['rain_btr']} mm")
             with c4: st.metric("RH BTR", f"{latest['rh_btr_avg']:.1f}%")
 
             # Chart Perbandingan (Dikecilkan ukurannya)
