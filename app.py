@@ -64,7 +64,7 @@ with st.sidebar:
             st.caption("Catatan: Data ini tidak dimasukkan ke database.")
 
 # --- 4. MAIN DASHBOARD ---
-st.title("🌊 Smart Flood Early Warning System (Zone Tapanuli Tengah)"
+st.title("🌊 Smart Flood Early Warning System (Zone Tapanuli Tengah)")
 tab1, tab2 = st.tabs(["📊 Monitoring Real-Time", "🧪 Simulasi AI"])
 
 with tab1:
