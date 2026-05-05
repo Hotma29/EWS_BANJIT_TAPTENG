@@ -136,8 +136,8 @@ with tab2:
     if st.button("🚀 Jalankan Prediksi AI", type="primary", use_container_width=True):
         try:
             # 1. Load Model (PASTIKAN NAMA FILE BENAR DI GITHUB)
-            model = joblib.load('model_ews.pkl')
-            le = joblib.load('label_encoder_ews.pkl')
+            model = joblib.load('model_ews_tapteng.pkl')
+            le = joblib.load('label_encoder_ews_tapteng.pkl')
 
             # 2. Hitung Fitur MAX Otomatis
             input_df = pd.DataFrame([{
