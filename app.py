@@ -47,9 +47,9 @@ def fetch_api_only():
 
 # --- 3. SIDEBAR (UNTUK DEMO) ---
 with st.sidebar:
-    st.image("https://cdn-icons-png.flaticon.com/512/4064/4064233.png", width=80)
+   
     st.title("⚙️ Panel Kontrol")
-    st.info("Tombol di bawah untuk menunjukkan ke Dosen bahwa sistem bisa menarik data real-time dari API.")
+   
     
     if st.button("🔄 Tarik Data API (Live Demo)", use_container_width=True):
         rt, rb = fetch_api_only()
@@ -64,7 +64,7 @@ with st.sidebar:
             st.caption("Catatan: Data ini tidak dimasukkan ke database.")
 
 # --- 4. MAIN DASHBOARD ---
-st.title("🌊 Smart Flood Early Warning System")
+st.title("🌊 Smart Flood Early Warning System (Zone Tapanuli Tengah)"
 tab1, tab2 = st.tabs(["📊 Monitoring Real-Time", "🧪 Simulasi AI"])
 
 with tab1:
