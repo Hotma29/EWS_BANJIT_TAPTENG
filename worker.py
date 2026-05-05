@@ -52,7 +52,7 @@ def run_system():
         print(f"Gagal koneksi database: {e}")
         return
 
-    # 3. UPSERT Data Harian (Update jika tanggal sama)
+    # 3. UPSERT Data Harian
     cur.execute("""
         INSERT INTO histori_harian (tanggal, created_at, rain_tuk, rain_btr, rh_tuk_avg, rh_btr_avg, entry_count)
         VALUES (%s, %s, %s, %s, %s, %s, 1)
@@ -73,30 +73,37 @@ def run_system():
     acc3_t = sum(r[0] for r in rows) # Akumulasi Tukka
     acc3_b = sum(r[1] for r in rows) # Akumulasi Batang Toru
     
-    # 5. FEATURE ENGINEERING (9 Fitur Sesuai Model ews.pkl)
+    # 5. FEATURE ENGINEERING (Wajib 10 Fitur untuk model terbaru)
     rain_max = max(rt, rb)
     rain3_max = max(acc3_t, acc3_b)
     rh_max = max(rht, rhb)
+    rata_rh = (rht + rhb) / 2  # Fitur ke-7 yang baru
     
-    # Susun DataFrame dengan nama kolom persis saat training
-    input_data = pd.DataFrame([{
-        'RAIN_TUKKA': rt,
-        'RAIN3_TUKKA': acc3_t,
-        'RH_TUKKA': rht,
-        'RAIN_BTR': rb,
-        'RAIN3_BTR': acc3_b,
-        'RHBTR': rhb,           # Sesuai model: RH Batang Toru tanpa underscore
-        'RAIN_MAX': rain_max,
-        'RAIN3_MAX': rain3_max,
-        'RH_MAX': rh_max
-    }])
+    # --- SUSUN DATAFRAME SESUAI URUTAN MODEL ---
+    # Nama kolom harus persis dengan model.feature_names_in_
+    features = [
+        'RAIN_TUKKA', 'RAIN3_TUKKA', 'RH_TUKKA', 
+        'RAIN_BTR', 'RAIN3_BTR', 'RHBTR', 
+        'RATA-RATA_RH', 
+        'RAIN_MAX', 'RAIN3_MAX', 'RH_MAX'
+    ]
+    
+    input_values = [[
+        rt, acc3_t, rht, 
+        rb, acc3_b, rhb, 
+        rata_rh, 
+        rain_max, rain3_max, rh_max
+    ]]
+    
+    input_df = pd.DataFrame(input_values, columns=features)
 
     # 6. PREDIKSI MENGGUNAKAN AI
     try:
-        model = joblib.load('model_ews_tapteng.pkl')
-        le = joblib.load('label_encoder_ews_tapteng.pkl')
+        # Load model dan label encoder terbaru
+        model = joblib.load('model_ews_mytapteng.pkl')
+        le = joblib.load('label_encoder_ews_mytapteng.pkl')
         
-        pred_numeric = model.predict(input_data)
+        pred_numeric = model.predict(input_df)
         status = le.inverse_transform(pred_numeric)[0]
     except Exception as e:
         print(f"Gagal melakukan prediksi AI: {e}")
@@ -106,16 +113,18 @@ def run_system():
     cur.execute("UPDATE histori_harian SET prediksi = %s WHERE tanggal = %s", (status, tgl))
     conn.commit()
     
-    print(f"[{waktu_lengkap}] Data Tersimpan. Status: {status}")
+    print(f"[{waktu_lengkap}] Sync Berhasil. Status AI: {status}")
 
-    # 8. NOTIFIKASI TELEGRAM (Hanya jika TINGGI)
-    if status == "TINGGI":
-        msg = (f"🚨 *EWS BANJIR TAPTENG: SIAGA* 🚨\n\n"
-               f"Status: *TINGGI*\n"
+    # 8. NOTIFIKASI TELEGRAM (Jika SIAGA/SEDANG atau TINGGI)
+    if status in ["SEDANG", "TINGGI"]:
+        emoji = "⚠️" if status == "SEDANG" else "🚨"
+        msg = (f"{emoji} *EWS BANJIR TAPTENG: {status}* {emoji}\n\n"
+               f"Status: *{status}*\n"
                f"Waktu: {wib_now.strftime('%H:%M')} WIB\n"
-               f"📍 Hujan Maks: {rain_max} mm\n"
-               f"📍 Akumulasi 3 Hari: {rain3_max} mm\n\n"
-               f"Harap waspada untuk wilayah hilir!")
+               f"📍 Hujan Saat Ini: {rain_max} mm\n"
+               f"📍 Akumulasi 3 Hari: {rain3_max} mm\n"
+               f"📍 Kelembapan (RH): {rh_max}%\n\n"
+               f"Harap tetap waspada!")
         
         requests.get(f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage", 
                      params={"chat_id": CHANNEL_ID, "text": msg, "parse_mode": "Markdown"})
