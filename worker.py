@@ -43,7 +43,7 @@ def run_system():
         print(f"Database Error: {e}")
         return
 
-    # 3. UPSERT & AMBIL TOTAL HARIAN TERBARU (PROGRESSIVE)
+    # 3. UPSERT & AMBIL TOTAL HARIAN TERBARU
     cur.execute("""
         INSERT INTO histori_harian (tanggal, created_at, rain_tuk, rain_btr, rh_tuk_avg, rh_btr_avg, entry_count)
         VALUES (%s, %s, %s, %s, %s, %s, 1)
@@ -68,30 +68,60 @@ def run_system():
     acc3_t = sum(r[0] for r in rows)
     acc3_b = sum(r[1] for r in rows)
     
-    # 5. FEATURE ENGINEERING (10 FITUR)
-    # Gunakan 'total_hari_ini' agar AI menilai kondisi becek sepanjang hari
-    rain_max_daily = max(total_hari_ini_tuk, total_hari_ini_btr)
-    rain3_max = max(acc3_t, acc3_b)
-    rh_max = max(rht, rhb)
+    # ==========================================
+    # 5. FEATURE ENGINEERING (INTEGRITAS SPASIAL)
+    # ==========================================
+    # Hitung Skor untuk menentukan stasiun representative
+    skor_tukka = max(total_hari_ini_tuk, acc3_t)
+    skor_btr = max(total_hari_ini_btr, acc3_b)
+    
+    # Ambil 1 paket data dari stasiun paling berbahaya
+    if skor_tukka >= skor_btr:
+        rain_max = total_hari_ini_tuk
+        rain3_max = acc3_t
+        rh_max = rht
+    else:
+        rain_max = total_hari_ini_btr
+        rain3_max = acc3_b
+        rh_max = rhb
+        
     rata_rh = (rht + rhb) / 2
     
     # --- 6. LOGIKA HYBRID (HARD RULE + AI) ---
-    if rain_max_daily >= 50:
+    # Update Hard Rule agar sinkron dengan Logika Excel (TINGGI: Rain>=50 OR Rain3>=100 OR (Rain>=40 AND RH>=90))
+    if (rain_max >= 50 or rain3_max >= 100 or (rain_max >= 40 and rh_max >= 90)):
         status = "TINGGI"
-        logika = f"Hard Rule: Akumulasi hari ini sudah {rain_max_daily} mm"
+        logika = f"Hard Rule: Kondisi Ekstrem (Rain: {rain_max}mm, RH: {rh_max}%)"
     else:
         try:
-            model = joblib.load('model_ews_mytapteng.pkl')
-            le = joblib.load('label_encoder_ews_mytapteng.pkl')
-            features = ['RAIN_TUKKA','RAIN3_TUKKA','RH_TUKKA','RAIN_BTR','RAIN3_BTR','RHBTR','RATA-RATA_RH','RAIN_MAX','RAIN3_MAX','RH_MAX']
+            # Sesuaikan nama file .pkl terbaru Abang
+            model = joblib.load('model_ews_flood.pkl')
+            le = joblib.load('label_encoder.pkl')
             
-            # Input menggunakan total hari ini agar AI tahu tanah sudah jenuh
-            input_df = pd.DataFrame([[total_hari_ini_tuk, acc3_t, rht, total_hari_ini_btr, acc3_b, rhb, rata_rh, rain_max_daily, rain3_max, rh_max]], columns=features)
-            status = le.inverse_transform(model.predict(input_df))[0]
+            # Urutan fitur harus sama persis dengan saat training
+            features = [
+                'RAIN_TUKKA', 'RAIN3_TUKKA', 'RH_TUKKA', 
+                'RAIN_BTR', 'RAIN3_BTR', 'RHBTR', 
+                'RATA-RATA_RH', 
+                'RAIN_MAX', 'RAIN3_MAX', 'RH_MAX'
+            ]
+            
+            input_data = [[
+                total_hari_ini_tuk, acc3_t, rht, 
+                total_hari_ini_btr, acc3_b, rhb, 
+                rata_rh, 
+                rain_max, rain3_max, rh_max
+            ]]
+            
+            input_df = pd.DataFrame(input_data, columns=features)
+            
+            pred_angka = model.predict(input_df)
+            status = le.inverse_transform(pred_angka)[0]
             logika = "Analisis AI Random Forest"
-        except:
+        except Exception as e:
+            print(f"Prediction Error: {e}")
             status = "RENDAH"
-            logika = "Fallback: Error Model"
+            logika = "Fallback: Error Prediction"
 
     # 7. UPDATE HASIL KE SUPABASE
     cur.execute("UPDATE histori_harian SET prediksi = %s WHERE tanggal = %s", (status, tgl))
@@ -103,10 +133,12 @@ def run_system():
         emoji = "⚠️" if status == "SEDANG" else "🚨"
         msg = (f"{emoji} *EWS BANJIR TAPTENG: {status}* {emoji}\n\n"
                f"Status: *{status}*\n"
-               f"Total Hujan Hari Ini: {rain_max_daily} mm\n"
+               f"Total Hujan Harian: {rain_max} mm\n"
+               f"Kelembapan: {rh_max} %\n"
                f"Logika: {logika}\n\n"
                f"Harap tetap waspada!")
-        requests.get(f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage", params={"chat_id": CHANNEL_ID, "text": msg, "parse_mode": "Markdown"})
+        requests.get(f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage", 
+                     params={"chat_id": CHANNEL_ID, "text": msg, "parse_mode": "Markdown"})
 
     cur.close(); conn.close()
 
