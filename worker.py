@@ -96,7 +96,7 @@ def run_system():
         try:
             # Sesuaikan nama file .pkl terbaru Abang
             model = joblib.load('model_ews_flood.pkl')
-            le = joblib.load('label_encoder.pkl')
+            le = joblib.load('label_encoder_flood.pkl')
             
             # Urutan fitur harus sama persis dengan saat training
             features = [
