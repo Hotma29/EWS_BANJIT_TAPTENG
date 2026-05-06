@@ -38,8 +38,8 @@ st.markdown("""
 @st.cache_resource
 def load_smart_model():
     # Pastikan file ini ada di folder yang sama di GitHub
-    model = joblib.load('model_ews_flood.pkl')
-    le = joblib.load('label_encoder_flood.pkl')
+    model = joblib.load('model_flood.pkl')
+    le = joblib.load('label_encoder_new.pkl')
     return model, le
 
 # --- 3. FUNGSI HELPER API ---
