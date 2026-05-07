@@ -197,7 +197,7 @@ with tab2:
             st.markdown("---")
             
             # Hasil Analisis Integritas Spasial
-            st.info(f"🔍 **Analisis Spasial:** Stasiun perwakilan bahaya saat ini adalah **{rep_station}**.")
+            st.info(f"🔍 **Analisis Spasial:** Representasi Hulu bahaya saat ini adalah **{rep_station}**.")
             
             color_res = "#1b5e20" if status_sim == "RENDAH" else "#e65100" if status_sim == "SEDANG" else "#b71c1c"
             st.markdown(f"""
