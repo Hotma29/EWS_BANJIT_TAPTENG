@@ -57,7 +57,7 @@ def fetch_api_only():
 # --- 4. SIDEBAR (PANEL KONTROL & LIVE DEMO) ---
 with st.sidebar:
     st.title("⚙️ Panel Kontrol")
-    st.info("Fitur ini digunakan untuk membuktikan sistem dapat terhubung ke stasiun cuaca secara real-time.")
+   
     
     if st.button("🔄 Tarik Data API (Live Demo)", use_container_width=True):
         rt, rb = fetch_api_only()
@@ -66,7 +66,7 @@ with st.sidebar:
             
             # Tampilan Live Data Hulu Tukka
             st.markdown("### 📍 Hulu Tukka")
-            st.write(f"- **Kondisi:** {rt['weather'][0]['description'].capitalize()}")
+    
             st.write(f"- **Hujan (1 Jam):** {rt.get('rain',{}).get('1h', 0.0)} mm")
             st.write(f"- **Kelembapan:** {rt['main']['humidity']}%")
             
@@ -74,7 +74,7 @@ with st.sidebar:
             
             # Tampilan Live Data Hulu Batang Toru
             st.markdown("### 📍 Hulu Batang Toru")
-            st.write(f"- **Kondisi:** {rb['weather'][0]['description'].capitalize()}")
+           
             st.write(f"- **Hujan (1 Jam):** {rb.get('rain',{}).get('1h', 0.0)} mm")
             st.write(f"- **Kelembapan:** {rb['main']['humidity']}%")
             
