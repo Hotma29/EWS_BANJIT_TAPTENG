@@ -71,19 +71,33 @@ def run_system():
 
     try:
         # 3. UPSERT & AMBIL TOTAL HARIAN
-        cur.execute("""
-            INSERT INTO histori_harian (tanggal, created_at, rain_tuk, rain_btr, rh_tuk_avg, rh_btr_avg, entry_count)
-            VALUES (%s, %s, %s, %s, %s, %s, 1)
-            ON CONFLICT (tanggal) DO UPDATE SET
-                rain_tuk = histori_harian.rain_tuk + EXCLUDED.rain_tuk,
-                rain_btr = histori_harian.rain_btr + EXCLUDED.rain_btr,
-                rh_tuk_avg = (histori_harian.rh_tuk_avg * histori_harian.entry_count + EXCLUDED.rh_tuk_avg) / (histori_harian.entry_count + 1),
-                rh_btr_avg = (histori_harian.rh_btr_avg * histori_harian.entry_count + EXCLUDED.rh_btr_avg) / (histori_harian.entry_count + 1),
-                entry_count = histori_harian.entry_count + 1,
-                created_at = EXCLUDED.created_at
-            RETURNING rain_tuk, rain_btr;
-        """, (tgl, waktu_lengkap, rt_hour, rb_hour, rht, rhb))
+        # Bagian di dalam run_system() pada worker.py
+cur.execute("""
+    INSERT INTO histori_harian (
+        tanggal, created_at, 
+        rain_tuk, rain_btr, 
+        rh_tuk_avg, rh_btr_avg, 
+        rh_tuk_latest, rh_btr_latest,
+        rain_tuk_latest, rain_btr_latest,
+        entry_count
+    )
+    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 1)
+    ON CONFLICT (tanggal) DO UPDATE SET
+        -- 1. AKUMULASI (Untuk AI)
+        rain_tuk = histori_harian.rain_tuk + EXCLUDED.rain_tuk,
+        rain_btr = histori_harian.rain_btr + EXCLUDED.rain_btr,
+        -- 2. RATA-RATA (Untuk Database)
+        rh_tuk_avg = (histori_harian.rh_tuk_avg * histori_harian.entry_count + EXCLUDED.rh_tuk_avg) / (histori_harian.entry_count + 1),
+        rh_btr_avg = (histori_harian.rh_btr_avg * histori_harian.entry_count + EXCLUDED.rh_btr_avg) / (histori_harian.entry_count + 1),
+        -- 3. LATEST (Untuk Tampilan UI)
+        rh_tuk_latest = EXCLUDED.rh_tuk_latest,
+        rh_btr_latest = EXCLUDED.rh_btr_latest,
+        rain_tuk_latest = EXCLUDED.rain_tuk_latest,
+        rain_btr_latest = EXCLUDED.rain_btr_latest,
         
+        entry_count = histori_harian.entry_count + 1,
+        created_at = EXCLUDED.created_at
+""", (tgl, waktu_lengkap, rt_hour, rb_hour, rht, rhb, rht, rhb, rt_hour, rb_hour))
         db_res = cur.fetchone()
         total_hari_ini_tuk = db_res[0]
         total_hari_ini_btr = db_res[1]
