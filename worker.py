@@ -142,15 +142,21 @@ def run_system():
         print(f"Hasil: {status} | {logika}")
 
         # H. Notifikasi Telegram
+        # H. Notifikasi Telegram (Ditambahkan info Rain3)
         if status in ["SEDANG", "TINGGI"]:
             emoji = "⚠️" if status == "SEDANG" else "🚨"
+            lokasi_nama = 'Tukka (Hutanabolon)' if skor_tukka >= skor_sibabangun else 'Sibabangun (Muara)'
+            
             msg = (f"{emoji} *EWS BANJIR TAPTENG: {status}* {emoji}\n\n"
-                   f"Lokasi Kritis: {'Tukka' if skor_tukka >= skor_sibabangun else 'Sibabangun'}\n"
-                   f"Hujan Harian: {rain_max:.1f} mm\n"
-                   f"Kelembapan: {rh_max}%\n"
-                   f"Mekanisme: {logika}\n\n"
-                   f"Waspada potensi banjir bandang!")
-            requests.get(f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage", params={"chat_id": CHANNEL_ID, "text": msg, "parse_mode": "Markdown"})
+                   f"📍 *Lokasi Kritis:* {lokasi_nama}\n"
+                   f"🌧️ *Hujan Hari Ini:* {rain_max:.1f} mm\n"
+                   f"🌊 *Hujan Akumulasi (3 Hari):* {rain3_max:.1f} mm\n"
+                   f"💧 *Kelembapan:* {rh_max}%\n"
+                   f"⚙️ *Mekanisme:* {logika}\n\n"
+                   f"⚠️ *Pesan:* Waspada potensi banjir bandang/kiriman karena akumulasi air di hulu sudah tinggi!")
+            
+            requests.get(f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage", 
+                         params={"chat_id": CHANNEL_ID, "text": msg, "parse_mode": "Markdown"})
 
     except Exception as e:
         print(f"Error Operasional: {e}")
