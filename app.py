@@ -1,11 +1,12 @@
 import streamlit as st
-import pandas as pd
+import pd
 import plotly.graph_objects as go
 import psycopg2
 import os
 import requests
 import joblib
 import numpy as np
+import pandas as pd
 
 # --- 1. KONFIGURASI ---
 DB_URL = os.getenv("SUPABASE_DB_URL")
@@ -39,35 +40,31 @@ def load_smart_model():
     return model, le
 
 # --- 3. FUNGSI KIRIM TELEGRAM (KHUSUS SIMULASI) ---
-def send_telegram_simulation(status, station, rain, rh, conf):
+def send_telegram_simulation(status, station, rain, rain3, rh, conf):
     try:
         text = (
             f"🧪 *[MODE SIMULASI LABORATORIUM]*\n"
             f"🚨 *STATUS: {status}* 🚨\n\n"
-            f"Lokasi Representatif: {station}\n"
-            f"Input Hujan: {rain} mm\n"
-            f"Input Kelembapan: {rh} %\n"
-            f"Confidence AI: {conf:.2f}%\n\n"
-            f"⚠️ _Pesan ini dikirim otomatis melalui fitur simulasi dashboard._"
+            f"📍 *Lokasi:* {station}\n"
+            f"🌧️ *Hujan Hari Ini:* {rain} mm\n"
+            f"🌊 *Hujan Akumulasi (3 Hari):* {rain3} mm\n"
+            f"💧 *Kelembapan:* {rh} %\n"
+            f"🎯 *Confidence AI:* {conf:.2f}%\n\n"
+            f"⚠️ _Pesan ini simulasi otomatis dari Dashboard EWS._"
         )
-        url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+        url = f"https://api.openweathermap.org/bot{BOT_TOKEN}/sendMessage"
         params = {"chat_id": CHANNEL_ID, "text": text, "parse_mode": "Markdown"}
         requests.get(url, params=params, timeout=10)
     except Exception as e:
         st.error(f"Gagal mengirim notifikasi Telegram: {e}")
 
 # --- 4. FUNGSI HELPER API (Live Demo Sidebar) ---
-# --- 3. FUNGSI HELPER API (Untuk Live Demo di Sidebar) ---
 def fetch_api_only():
     try:
-        # UPDATE KOORDINAT DI SINI:
-        # Tukka (Hutanabolon) - lat: 1.699608, lon: 98.910028
+        # UPDATE: Titik Hutanabolon & Muara Sibuntoan
         res_t = requests.get(f"https://api.openweathermap.org/data/2.5/weather?lat=1.699608&lon=98.910028&appid={API_KEY}&units=metric", timeout=10).json()
-        
-        # Sibabangun (Muara Sibuntoan) - lat: 1.541647, lon: 98.993431
-        res_b = requests.get(f"https://api.openweathermap.org/data/2.5/weather?lat=1.541647&lon=98.993431&appid={API_KEY}&units=metric", timeout=10).json()
-        
-        return res_t, res_b
+        res_s = requests.get(f"https://api.openweathermap.org/data/2.5/weather?lat=1.541647&lon=98.993431&appid={API_KEY}&units=metric", timeout=10).json()
+        return res_t, res_s
     except:
         return None, None
 
@@ -75,20 +72,20 @@ def fetch_api_only():
 with st.sidebar:
     st.title("⚙️ Panel Kontrol")
     if st.button("🔄 Tarik Data API (Live Demo)", use_container_width=True):
-        rt, rb = fetch_api_only()
-        if rt and rb:
+        rt, rs = fetch_api_only()
+        if rt and rs:
             st.success("Koneksi API Berhasil!")
-            st.markdown("### 📍 Hulu Tukka")
+            st.markdown("### 📍 Hulu Tukka (Hutanabolon)")
             st.write(f"- **Hujan (1 Jam):** {rt.get('rain',{}).get('1h', 0.0)} mm")
             st.write(f"- **Kelembapan:** {rt['main']['humidity']}%")
             st.divider()
-            st.markdown("### 📍 Hulu Sibabangun")
-            st.write(f"- **Hujan (1 Jam):** {rb.get('rain',{}).get('1h', 0.0)} mm")
-            st.write(f"- **Kelembapan:** {rb['main']['humidity']}%")
-            st.caption("ℹ️ Data ini tidak disimpan ke database.")
+            st.markdown("### 📍 Hulu Sibabangun (Muara)")
+            st.write(f"- **Hujan (1 Jam):** {rs.get('rain',{}).get('1h', 0.0)} mm")
+            st.write(f"- **Kelembapan:** {rs['main']['humidity']}%")
+            st.caption("ℹ️ Data simulasi API ini tidak disimpan ke database.")
 
 # --- 6. MAIN DASHBOARD ---
-st.title("🌊 Smart Flood Early Warning System (Zona Tapanuli Tengah)")
+st.title("🌊 Smart Flood Early Warning System (Tapanuli Tengah)")
 tab1, tab2 = st.tabs(["📊 Monitoring Real-Time", "🧪 Laboratorium AI (Simulasi)"])
 
 with tab1:
@@ -115,51 +112,28 @@ with tab1:
                 </div>
             """, unsafe_allow_html=True)
 
-            st.subheader("📍 Pemantauan Hulu Tukka")
+            # Bagian Tukka
+            st.subheader("📍 Pemantauan Hulu Tukka (Hutanabolon)")
             c1, c2, c3 = st.columns(3)
             with c1: st.metric("Rain Harian", f"{latest['rain_tuk']:.2f} mm")
             with c2: st.metric("Rain Terakhir", f"{latest['rain_tuk_latest']:.2f} mm")
             with c3: st.metric("RH Terakhir", f"{latest['rh_tuk_latest']:.1f} %")
 
-            st.subheader("📍 Pemantauan Hulu Sibabangun")
+            # Bagian Sibabangun (Memakai data rain_btr dari DB)
+            st.subheader("📍 Pemantauan Hulu Sibabangun (Muara Sibuntoan)")
             c4, c5, c6 = st.columns(3)
             with c4: st.metric("Rain Harian ", f"{latest['rain_btr']:.2f} mm")
             with c5: st.metric("Rain Terakhir ", f"{latest['rain_btr_latest']:.2f} mm")
             with c6: st.metric("RH Terakhir ", f"{latest['rh_btr_latest']:.1f} %")
 
             st.markdown("---")
-            
-            # --- UPDATE: GRAFIK BATANG (BAR CHART) ---
             st.subheader("📊 Perbandingan Hujan Harian (7 Hari Terakhir)")
             df_plot = df_db.sort_values('tanggal')
             fig = go.Figure()
-            
-            # Bar untuk Tukka
-            fig.add_trace(go.Bar(
-                x=df_plot['tanggal'], 
-                y=df_plot['rain_tuk'], 
-                name='Hulu Tukka', 
-                marker_color='#1976d2'
-            ))
-            
-            # Bar untuk Sibabangun
-            fig.add_trace(go.Bar(
-                x=df_plot['tanggal'], 
-                y=df_plot['rain_btr'], 
-                name='Hulu Sibabangun', 
-                marker_color='#ef5350'
-            ))
-            
-            fig.update_layout(
-                barmode='group', # Bar ditampilkan berdampingan per tanggal
-                template="plotly_white", 
-                height=400,
-                xaxis_title="Tanggal",
-                yaxis_title="Curah Hujan (mm)",
-                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
-            )
+            fig.add_trace(go.Bar(x=df_plot['tanggal'], y=df_plot['rain_tuk'], name='Tukka', marker_color='#1976d2'))
+            fig.add_trace(go.Bar(x=df_plot['tanggal'], y=df_plot['rain_btr'], name='Sibabangun', marker_color='#ef5350'))
+            fig.update_layout(barmode='group', template="plotly_white", height=350)
             st.plotly_chart(fig, use_container_width=True)
-            
     except Exception as e:
         st.error(f"Koneksi Database Bermasalah: {e}")
 
@@ -181,12 +155,12 @@ with tab2:
         try:
             model, le = load_smart_model()
             skor_tukka = max(s1, s2)
-            skor_sibabangun = max(s4, s5)
+            skor_sibabangun = max(s4, s5) # UPDATE NAMA VARIABEL
             
             if skor_tukka >= skor_sibabangun:
-                rep_station, rain_max, rain3_max, rh_max = "Hulu Tukka", s1, s2, s3
+                rep_station, rain_max, rain3_max, rh_max = "Tukka (Hutanabolon)", s1, s2, s3
             else:
-                rep_station, rain_max, rain3_max, rh_max = "Hulu Sibabangun", s4, s5, s6
+                rep_station, rain_max, rain3_max, rh_max = "Sibabangun (Muara)", s4, s5, s6
             
             rata_rh = (s3 + s6) / 2
             features = ['RAIN_TUKKA', 'RAIN3_TUKKA', 'RH_TUKKA', 'RAIN_BTR', 'RAIN3_BTR', 'RHBTR', 'RATA-RATA_RH', 'RAIN_MAX', 'RAIN3_MAX', 'RH_MAX']
@@ -203,13 +177,14 @@ with tab2:
             st.markdown(f"""
                 <div style="background-color: {color_res}; padding: 30px; border-radius: 20px; text-align: center; color: white;">
                     <h1 style="font-size: 5rem; margin:10px 0;">{status_sim}</h1>
-                    <p style="font-size: 1.2rem;">Confidence Level: {conf:.2f}%</p>
+                    <p style="font-size: 1.5rem;">Confidence Level: {conf:.2f}%</p>
                 </div>
             """, unsafe_allow_html=True)
 
+            # --- NOTIFIKASI TELEGRAM DENGAN INFO RAIN3 ---
             if status_sim == "TINGGI":
                 send_telegram_simulation(status_sim, rep_station, rain_max, rain3_max, rh_max, conf)
-                st.toast("🚨 Notifikasi Bahaya dikirim ke Telegram!", icon="🚨")
+                st.toast("🚨 Notifikasi Bahaya Simulasi dikirim ke Telegram!", icon="🚨")
 
         except Exception as e:
             st.error(f"Gagal memproses model AI: {e}")
