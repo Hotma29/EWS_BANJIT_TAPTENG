@@ -57,10 +57,16 @@ def send_telegram_simulation(status, station, rain, rh, conf):
         st.error(f"Gagal mengirim notifikasi Telegram: {e}")
 
 # --- 4. FUNGSI HELPER API (Live Demo Sidebar) ---
+# --- 3. FUNGSI HELPER API (Untuk Live Demo di Sidebar) ---
 def fetch_api_only():
     try:
-        res_t = requests.get(f"https://api.openweathermap.org/data/2.5/weather?lat=1.72&lon=98.92&appid={API_KEY}&units=metric", timeout=10).json()
-        res_b = requests.get(f"https://api.openweathermap.org/data/2.5/weather?lat=1.55&lon=99.10&appid={API_KEY}&units=metric", timeout=10).json()
+        # UPDATE KOORDINAT DI SINI:
+        # Tukka (Hutanabolon) - lat: 1.699608, lon: 98.910028
+        res_t = requests.get(f"https://api.openweathermap.org/data/2.5/weather?lat=1.699608&lon=98.910028&appid={API_KEY}&units=metric", timeout=10).json()
+        
+        # Sibabangun (Muara Sibuntoan) - lat: 1.541647, lon: 98.993431
+        res_b = requests.get(f"https://api.openweathermap.org/data/2.5/weather?lat=1.541647&lon=98.993431&appid={API_KEY}&units=metric", timeout=10).json()
+        
         return res_t, res_b
     except:
         return None, None
@@ -76,13 +82,13 @@ with st.sidebar:
             st.write(f"- **Hujan (1 Jam):** {rt.get('rain',{}).get('1h', 0.0)} mm")
             st.write(f"- **Kelembapan:** {rt['main']['humidity']}%")
             st.divider()
-            st.markdown("### 📍 Hulu Batang Toru")
+            st.markdown("### 📍 Hulu Sibabangun")
             st.write(f"- **Hujan (1 Jam):** {rb.get('rain',{}).get('1h', 0.0)} mm")
             st.write(f"- **Kelembapan:** {rb['main']['humidity']}%")
             st.caption("ℹ️ Data ini tidak disimpan ke database.")
 
 # --- 6. MAIN DASHBOARD ---
-st.title("🌊 Smart Flood Early Warning System (Tapanuli Tengah)")
+st.title("🌊 Smart Flood Early Warning System (Zona Tapanuli Tengah)")
 tab1, tab2 = st.tabs(["📊 Monitoring Real-Time", "🧪 Laboratorium AI (Simulasi)"])
 
 with tab1:
@@ -115,7 +121,7 @@ with tab1:
             with c2: st.metric("Rain Terakhir", f"{latest['rain_tuk_latest']:.2f} mm")
             with c3: st.metric("RH Terakhir", f"{latest['rh_tuk_latest']:.1f} %")
 
-            st.subheader("📍 Pemantauan Hulu Batang Toru")
+            st.subheader("📍 Pemantauan Hulu Sibabangun")
             c4, c5, c6 = st.columns(3)
             with c4: st.metric("Rain Harian ", f"{latest['rain_btr']:.2f} mm")
             with c5: st.metric("Rain Terakhir ", f"{latest['rain_btr_latest']:.2f} mm")
@@ -136,11 +142,11 @@ with tab1:
                 marker_color='#1976d2'
             ))
             
-            # Bar untuk Batang Toru
+            # Bar untuk Sibabangun
             fig.add_trace(go.Bar(
                 x=df_plot['tanggal'], 
                 y=df_plot['rain_btr'], 
-                name='Hulu Batang Toru', 
+                name='Hulu Sibabangun', 
                 marker_color='#ef5350'
             ))
             
@@ -166,7 +172,7 @@ with tab2:
         s2 = st.number_input("Akumulasi 3 Hari (mm)", 0.0, 500.0, 20.0, key="sim2")
         s3 = st.slider("Kelembapan / RH (%)", 0, 100, 80, key="sim3")
     with col_b:
-        st.markdown("### 📍 Input Hulu Batang Toru")
+        st.markdown("### 📍 Input Hulu Sibabangun")
         s4 = st.number_input("Hujan Hari Ini (mm) ", 0.0, 300.0, 5.0, key="sim4")
         s5 = st.number_input("Akumulasi 3 Hari (mm) ", 0.0, 500.0, 10.0, key="sim5")
         s6 = st.slider("Kelembapan / RH (%) ", 0, 100, 75, key="sim6")
@@ -175,12 +181,12 @@ with tab2:
         try:
             model, le = load_smart_model()
             skor_tukka = max(s1, s2)
-            skor_btr = max(s4, s5)
+            skor_sibabangun = max(s4, s5)
             
-            if skor_tukka >= skor_btr:
+            if skor_tukka >= skor_sibabangun:
                 rep_station, rain_max, rain3_max, rh_max = "Hulu Tukka", s1, s2, s3
             else:
-                rep_station, rain_max, rain3_max, rh_max = "Hulu Batang Toru", s4, s5, s6
+                rep_station, rain_max, rain3_max, rh_max = "Hulu Sibabangun", s4, s5, s6
             
             rata_rh = (s3 + s6) / 2
             features = ['RAIN_TUKKA', 'RAIN3_TUKKA', 'RH_TUKKA', 'RAIN_BTR', 'RAIN3_BTR', 'RHBTR', 'RATA-RATA_RH', 'RAIN_MAX', 'RAIN3_MAX', 'RH_MAX']
@@ -202,7 +208,7 @@ with tab2:
             """, unsafe_allow_html=True)
 
             if status_sim == "TINGGI":
-                send_telegram_simulation(status_sim, rep_station, rain_max, rh_max, conf)
+                send_telegram_simulation(status_sim, rep_station, rain_max, rain3_max, rh_max, conf)
                 st.toast("🚨 Notifikasi Bahaya dikirim ke Telegram!", icon="🚨")
 
         except Exception as e:
