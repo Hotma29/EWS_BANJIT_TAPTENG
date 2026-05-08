@@ -1,5 +1,4 @@
 import streamlit as st
-import pd
 import plotly.graph_objects as go
 import psycopg2
 import os
