@@ -13,9 +13,16 @@ BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 CHANNEL_ID = os.getenv("TELEGRAM_CHANNEL_ID")
 DB_URL = os.getenv("SUPABASE_DB_URL")
 
+# Konfigurasi Titik Pantau Berdasarkan Analisis Spasial Terbaru
 LOCS = {
-    "Tukka": {"lat": 1.72, "lon": 98.92}, 
-    "BTR": {"lat": 1.55, "lon": 99.10}
+    "Tukka": {
+        "lat": 1.699608, 
+        "lon": 98.910028
+    }, 
+    "Sibabangun": {
+        "lat": 1.541647, 
+        "lon": 98.993431
+    }
 }
 
 # --- 2. FUNGSI FETCH DATA (RETRY LOGIC) ---
