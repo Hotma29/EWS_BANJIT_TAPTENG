@@ -122,13 +122,38 @@ with tab1:
             with c6: st.metric("RH Terakhir ", f"{latest['rh_btr_latest']:.1f} %")
 
             st.markdown("---")
-            st.subheader("📈 Tren Akumulasi Curah Hujan (7 Hari)")
+            
+            # --- UPDATE: GRAFIK BATANG (BAR CHART) ---
+            st.subheader("📊 Perbandingan Hujan Harian (7 Hari Terakhir)")
             df_plot = df_db.sort_values('tanggal')
             fig = go.Figure()
-            fig.add_trace(go.Scatter(x=df_plot['tanggal'], y=df_plot['rain_tuk'], name='Tukka', line=dict(color='#1976d2', width=4), mode='lines+markers'))
-            fig.add_trace(go.Scatter(x=df_plot['tanggal'], y=df_plot['rain_btr'], name='Batang Toru', line=dict(color='#ef5350', width=4), mode='lines+markers'))
-            fig.update_layout(template="plotly_white", height=350)
+            
+            # Bar untuk Tukka
+            fig.add_trace(go.Bar(
+                x=df_plot['tanggal'], 
+                y=df_plot['rain_tuk'], 
+                name='Hulu Tukka', 
+                marker_color='#1976d2'
+            ))
+            
+            # Bar untuk Batang Toru
+            fig.add_trace(go.Bar(
+                x=df_plot['tanggal'], 
+                y=df_plot['rain_btr'], 
+                name='Hulu Batang Toru', 
+                marker_color='#ef5350'
+            ))
+            
+            fig.update_layout(
+                barmode='group', # Bar ditampilkan berdampingan per tanggal
+                template="plotly_white", 
+                height=400,
+                xaxis_title="Tanggal",
+                yaxis_title="Curah Hujan (mm)",
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+            )
             st.plotly_chart(fig, use_container_width=True)
+            
     except Exception as e:
         st.error(f"Koneksi Database Bermasalah: {e}")
 
@@ -172,14 +197,13 @@ with tab2:
             st.markdown(f"""
                 <div style="background-color: {color_res}; padding: 30px; border-radius: 20px; text-align: center; color: white;">
                     <h1 style="font-size: 5rem; margin:10px 0;">{status_sim}</h1>
-                    <p style="font-size: 1.5rem;">Confidence Level: {conf:.2f}%</p>
+                    <p style="font-size: 1.2rem;">Confidence Level: {conf:.2f}%</p>
                 </div>
             """, unsafe_allow_html=True)
 
-            # --- LOGIKA NOTIFIKASI TELEGRAM JIKA TINGGI ---
             if status_sim == "TINGGI":
                 send_telegram_simulation(status_sim, rep_station, rain_max, rh_max, conf)
-                st.toast("🚨 Notifikasi Bahaya telah dikirim ke Telegram!", icon="🚨")
+                st.toast("🚨 Notifikasi Bahaya dikirim ke Telegram!", icon="🚨")
 
         except Exception as e:
             st.error(f"Gagal memproses model AI: {e}")
