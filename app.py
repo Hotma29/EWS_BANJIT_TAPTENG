@@ -51,7 +51,7 @@ def send_telegram_simulation(status, station, rain, rain3, rh, conf):
             f"🎯 *Confidence AI:* {conf:.2f}%\n\n"
             f"⚠️ _Pesan ini simulasi otomatis dari Dashboard EWS._"
         )
-        url = f"https://api.openweathermap.org/bot{BOT_TOKEN}/sendMessage"
+        url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
         params = {"chat_id": CHANNEL_ID, "text": text, "parse_mode": "Markdown"}
         requests.get(url, params=params, timeout=10)
     except Exception as e:
