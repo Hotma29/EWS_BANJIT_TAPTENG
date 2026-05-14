@@ -114,15 +114,15 @@ with tab1:
             # Bagian Tukka
             st.subheader("📍 Pemantauan Hulu Tukka (Hutanabolon)")
             c1, c2, c3 = st.columns(3)
-            with c1: st.metric("Rain Harian", f"{latest['rain_tuk']:.2f} mm")
-            with c2: st.metric("Rain Terakhir", f"{latest['rain_tuk_latest']:.2f} mm")
+            with c1: st.metric("Hujan Total Hari Ini", f"{latest['rain_tuk']:.2f} mm")
+            with c2: st.metric("Hujan 1jam Terakhir", f"{latest['rain_tuk_latest']:.2f} mm")
             with c3: st.metric("RH Terakhir", f"{latest['rh_tuk_latest']:.1f} %")
 
             # Bagian Sibabangun (Memakai data rain_btr dari DB)
             st.subheader("📍 Pemantauan Hulu Sibabangun (Muara Sibuntoan)")
             c4, c5, c6 = st.columns(3)
-            with c4: st.metric("Rain Harian ", f"{latest['rain_btr']:.2f} mm")
-            with c5: st.metric("Rain Terakhir ", f"{latest['rain_btr_latest']:.2f} mm")
+            with c4: st.metric("Hujan Total Hari Ini ", f"{latest['rain_btr']:.2f} mm")
+            with c5: st.metric("hujan 1jam Terakhir ", f"{latest['rain_btr_latest']:.2f} mm")
             with c6: st.metric("RH Terakhir ", f"{latest['rh_btr_latest']:.1f} %")
 
             st.markdown("---")
