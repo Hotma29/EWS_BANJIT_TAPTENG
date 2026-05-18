@@ -118,10 +118,15 @@ def run_system():
             
         rata_rh = (rht + rhs) / 2
 
-        # F. Logika Prediksi (Hybrid)
-        if (rain_max >= 50):
+        # F. Logika Prediksi (Hybrid Pure)
+        if rt_hour >= 20.0 or rs_hour >= 20.0:
             status = "TINGGI"
-            logika = "Hard Rule: Ambang Batas Kritis"
+            logika = "Fail-Safe: Hujan Instan Sangat Lebat (Bypass AI)"
+            
+        elif rt_hour >= 10.0 or rs_hour >= 10.0:
+            status = "SEDANG"
+            logika = "Fail-Safe: Hujan Instan Lebat (Bypass AI)"
+            
         else:
             try:
                 model = joblib.load('model_banjir_mine.pkl')
@@ -141,19 +146,32 @@ def run_system():
         conn.commit()
         print(f"Hasil: {status} | {logika}")
 
-        # H. Notifikasi Telegram
-        # H. Notifikasi Telegram (Ditambahkan info Rain3)
+        # H. Notifikasi Telegram (Pesan Himbauan Dinamis, Simpel, & Objektif)
         if status in ["SEDANG", "TINGGI"]:
-            emoji = "⚠️" if status == "SEDANG" else "🚨"
+            if status == "SEDANG":
+                emoji = "⚠️"
+                pesan_himbauan = (
+                    "*STATUS: WASPADA (SEDANG)*\n"
+                    "Terdeteksi curah hujan lebat atau akumulasi air yang meningkat di wilayah hulu. "
+                    "Mohon tetap waspada terhadap potensi kenaikan debit air sungai."
+                )
+            else:  # Jika STATUS == TINGGI
+                emoji = "🚨"
+                pesan_himbauan = (
+                    "*🚨 STATUS: BAHAYA (TINGGI) 🚨*\n"
+                    "Terdeteksi curah hujan sangat lebat atau akumulasi air tingkat kritis di wilayah hulu. "
+                    "Mohon segera bersiap-siap untuk mengantisipasi potensi banjir kiriman."
+                )
+                
             lokasi_nama = 'Tukka (Hutanabolon)' if skor_tukka >= skor_sibabangun else 'Sibabangun (Muara)'
             
             msg = (f"{emoji} *EWS BANJIR TAPTENG: {status}* {emoji}\n\n"
-                   f"📍 *Lokasi Kritis:* {lokasi_nama}\n"
+                   f"📍 *Lokasi Pantau:* {lokasi_nama}\n"
                    f"🌧️ *Hujan Hari Ini:* {rain_max:.1f} mm\n"
                    f"🌊 *Hujan Akumulasi (3 Hari):* {rain3_max:.1f} mm\n"
                    f"💧 *Kelembapan:* {rh_max}%\n"
                    f"⚙️ *Mekanisme:* {logika}\n\n"
-                   f"⚠️ *Pesan:* Waspada potensi banjir bandang/kiriman karena akumulasi air di hulu sudah tinggi!")
+                   f"📢 *Info:* {pesan_himbauan}")
             
             requests.get(f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage", 
                          params={"chat_id": CHANNEL_ID, "text": msg, "parse_mode": "Markdown"})
