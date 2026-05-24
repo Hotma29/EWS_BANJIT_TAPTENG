@@ -34,8 +34,8 @@ st.markdown("""
 # --- 2. FUNGSI LOAD MODEL ---
 @st.cache_resource
 def load_smart_model():
-    model = joblib.load('model_banjir_mine.pkl')
-    le = joblib.load('label_encoder_mine.pkl')
+    model = joblib.load('model_banjir_.pkl')
+    le = joblib.load('label_encoder_.pkl')
     return model, le
 
 # --- 3. FUNGSI KIRIM TELEGRAM (KHUSUS SIMULASI) ---
