@@ -129,8 +129,8 @@ def run_system():
             
         else:
             try:
-                model = joblib.load('model_banjir_mine.pkl')
-                le = joblib.load('label_encoder_mine.pkl')
+                model = joblib.load('model_banjir_.pkl')
+                le = joblib.load('label_encoder_.pkl')
                 
                 features = ['RAIN_TUKKA', 'RAIN3_TUKKA', 'RH_TUKKA', 'RAIN_BTR', 'RAIN3_BTR', 'RHBTR', 'RATA-RATA_RH', 'RAIN_MAX', 'RAIN3_MAX', 'RH_MAX']
                 input_df = pd.DataFrame([[total_harian_tuk, acc3_t, rht, total_harian_sibabangun, acc3_s, rhs, rata_rh, rain_max, rain3_max, rh_max]], columns=features)
