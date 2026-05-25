@@ -157,12 +157,12 @@ with tab2:
             skor_sibabangun = max(s4, s5) # UPDATE NAMA VARIABEL
             
             if skor_tukka >= skor_sibabangun:
-                rep_station, rain_max, rain3_max, rh_max = "Tukka (Hutanabolon)", s1, s2, s3
+                rep_station, rain_rep, rain3_rep, rh_rep = "Tukka (Hutanabolon)", s1, s2, s3
             else:
-                rep_station, rain_max, rain3_max, rh_max = "Sibabangun (Muara)", s4, s5, s6
+                rep_station, rain_rep, rain3_rep, rh_rep = "Sibabangun (Muara)", s4, s5, s6
             
             rata_rh = (s3 + s6) / 2
-            features = ['RAIN_TUKKA', 'RAIN3_TUKKA', 'RH_TUKKA', 'RAIN_BTR', 'RAIN3_BTR', 'RHBTR', 'RATA-RATA_RH', 'RAIN_MAX', 'RAIN3_MAX', 'RH_MAX']
+            features = ['RAIN_TUKKA', 'RAIN3_TUKKA', 'RH_TUKKA', 'RAIN_SBBN', 'RAIN3_SBBN', 'RH_SBBN', 'RAIN_REP', 'RAIN3_REP', 'RH_REP']
             input_df = pd.DataFrame([[s1, s2, s3, s4, s5, s6, rata_rh, rain_max, rain3_max, rh_max]], columns=features)
             
             pred = model.predict(input_df)
