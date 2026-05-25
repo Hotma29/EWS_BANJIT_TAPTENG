@@ -31,9 +31,10 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- 2. FUNGSI LOAD MODEL ---
+# --- 2. FUNGSI LOAD MODEL (Update Nama File 9 Fitur) ---
 @st.cache_resource
 def load_smart_model():
+    # Menggunakan file .pkl dari kodingan training 9 fitur
     model = joblib.load('model_banjir_.pkl')
     le = joblib.load('label_encoder_.pkl')
     return model, le
@@ -44,7 +45,7 @@ def send_telegram_simulation(status, station, rain, rain3, rh, conf):
         text = (
             f"🧪 *[MODE SIMULASI LABORATORIUM]*\n"
             f"🚨 *STATUS: {status}* 🚨\n\n"
-            f"📍 *Lokasi:* {station}\n"
+            f"📍 *Lokasi Terparah:* {station}\n"
             f"🌧️ *Hujan Hari Ini:* {rain} mm\n"
             f"🌊 *Hujan Akumulasi (3 Hari):* {rain3} mm\n"
             f"💧 *Kelembapan:* {rh} %\n"
@@ -60,7 +61,7 @@ def send_telegram_simulation(status, station, rain, rain3, rh, conf):
 # --- 4. FUNGSI HELPER API (Live Demo Sidebar) ---
 def fetch_api_only():
     try:
-        # UPDATE: Titik Hutanabolon & Muara Sibuntoan
+        # Titik Hutanabolon & Muara Sibuntoan
         res_t = requests.get(f"https://api.openweathermap.org/data/2.5/weather?lat=1.699608&lon=98.910028&appid={API_KEY}&units=metric", timeout=10).json()
         res_s = requests.get(f"https://api.openweathermap.org/data/2.5/weather?lat=1.541647&lon=98.993431&appid={API_KEY}&units=metric", timeout=10).json()
         return res_t, res_s
@@ -78,7 +79,7 @@ with st.sidebar:
             st.write(f"- **Hujan (1 Jam):** {rt.get('rain',{}).get('1h', 0.0)} mm")
             st.write(f"- **Kelembapan:** {rt['main']['humidity']}%")
             st.divider()
-            st.markdown("### 📍 Hulu Sibabangun (Muara)")
+            st.markdown("### 📍 Hilir Sibabangun (Muara)")
             st.write(f"- **Hujan (1 Jam):** {rs.get('rain',{}).get('1h', 0.0)} mm")
             st.write(f"- **Kelembapan:** {rs['main']['humidity']}%")
             st.caption("ℹ️ Data simulasi API ini tidak disimpan ke database.")
@@ -111,18 +112,16 @@ with tab1:
                 </div>
             """, unsafe_allow_html=True)
 
-            # Bagian Tukka
             st.subheader("📍 Pemantauan Hulu Tukka (Hutanabolon)")
             c1, c2, c3 = st.columns(3)
             with c1: st.metric("Hujan Total Hari Ini", f"{latest['rain_tuk']:.2f} mm")
             with c2: st.metric("Hujan 1jam Terakhir", f"{latest['rain_tuk_latest']:.2f} mm")
             with c3: st.metric("RH Terakhir", f"{latest['rh_tuk_latest']:.1f} %")
 
-            # Bagian Sibabangun (Memakai data rain_btr dari DB)
-            st.subheader("📍 Pemantauan Hulu Sibabangun (Muara Sibuntoan)")
+            st.subheader("📍 Pemantauan Hilir Sibabangun (Muara Sibuntoan)")
             c4, c5, c6 = st.columns(3)
             with c4: st.metric("Hujan Total Hari Ini ", f"{latest['rain_btr']:.2f} mm")
-            with c5: st.metric("hujan 1jam Terakhir ", f"{latest['rain_btr_latest']:.2f} mm")
+            with c5: st.metric("Hujan 1jam Terakhir ", f"{latest['rain_btr_latest']:.2f} mm")
             with c6: st.metric("RH Terakhir ", f"{latest['rh_btr_latest']:.1f} %")
 
             st.markdown("---")
@@ -137,7 +136,7 @@ with tab1:
         st.error(f"Koneksi Database Bermasalah: {e}")
 
 with tab2:
-    st.header("🧪 Simulasi Analisis AI (Random Forest)")
+    st.header("🧪 Simulasi Analisis AI (Random Forest 9 Fitur)")
     col_a, col_b = st.columns(2)
     with col_a:
         st.markdown("### 📍 Input Hulu Tukka")
@@ -145,7 +144,7 @@ with tab2:
         s2 = st.number_input("Akumulasi 3 Hari (mm)", 0.0, 500.0, 20.0, key="sim2")
         s3 = st.slider("Kelembapan / RH (%)", 0, 100, 80, key="sim3")
     with col_b:
-        st.markdown("### 📍 Input Hulu Sibabangun")
+        st.markdown("### 📍 Input Hilir Sibabangun (SBBN)")
         s4 = st.number_input("Hujan Hari Ini (mm) ", 0.0, 300.0, 5.0, key="sim4")
         s5 = st.number_input("Akumulasi 3 Hari (mm) ", 0.0, 500.0, 10.0, key="sim5")
         s6 = st.slider("Kelembapan / RH (%) ", 0, 100, 75, key="sim6")
@@ -153,24 +152,33 @@ with tab2:
     if st.button("🚀 Jalankan Analisis AI", type="primary", use_container_width=True):
         try:
             model, le = load_smart_model()
+            
+            # 1. CARI LOKASI TERPARAH UNTUK MENGISI FITUR _REP
             skor_tukka = max(s1, s2)
-            skor_sibabangun = max(s4, s5) # UPDATE NAMA VARIABEL
+            skor_sibabangun = max(s4, s5)
             
             if skor_tukka >= skor_sibabangun:
                 rep_station, rain_rep, rain3_rep, rh_rep = "Tukka (Hutanabolon)", s1, s2, s3
             else:
                 rep_station, rain_rep, rain3_rep, rh_rep = "Sibabangun (Muara)", s4, s5, s6
             
-            rata_rh = (s3 + s6) / 2
-            features = ['RAIN_TUKKA', 'RAIN3_TUKKA', 'RH_TUKKA', 'RAIN_SBBN', 'RAIN3_SBBN', 'RH_SBBN', 'RAIN_REP', 'RAIN3_REP', 'RH_REP']
-            input_df = pd.DataFrame([[s1, s2, s3, s4, s5, s6, rata_rh, rain_max, rain3_max, rh_max]], columns=features)
+            # 2. BENTUK DATAFRAME 9 FITUR (Persis urutan saat training!)
+            features = [
+                'RAIN_TUKKA', 'RAIN3_TUKKA', 'RH_TUKKA',
+                'RAIN_SBBN', 'RAIN3_SBBN', 'RH_SBBN',
+                'RAIN_REP', 'RAIN3_REP', 'RH_REP'
+            ]
             
+            # Memasukkan semua 9 data (s1 sampai s6 + 3 data rep)
+            input_df = pd.DataFrame([[s1, s2, s3, s4, s5, s6, rain_rep, rain3_rep, rh_rep]], columns=features)
+            
+            # 3. PREDIKSI
             pred = model.predict(input_df)
             status_sim = le.inverse_transform(pred)[0]
             conf = np.max(model.predict_proba(input_df)) * 100
 
             st.markdown("---")
-            st.info(f"🔍 **Analisis Spasial:** Representasi hulu bahaya adalah **{rep_station}**.")
+            st.info(f"🔍 **Analisis Spasial:** Representasi fitur REP saat ini diambil dari kondisi **{rep_station}**.")
             
             color_res = "#1b5e20" if status_sim == "RENDAH" else "#e65100" if status_sim == "SEDANG" else "#b71c1c"
             st.markdown(f"""
@@ -180,9 +188,9 @@ with tab2:
                 </div>
             """, unsafe_allow_html=True)
 
-            # --- NOTIFIKASI TELEGRAM DENGAN INFO RAIN3 ---
+            # --- NOTIFIKASI TELEGRAM ---
             if status_sim == "TINGGI":
-                send_telegram_simulation(status_sim, rep_station, rain_max, rain3_max, rh_max, conf)
+                send_telegram_simulation(status_sim, rep_station, rain_rep, rain3_rep, rh_rep, conf)
                 st.toast("🚨 Notifikasi Bahaya Simulasi dikirim ke Telegram!", icon="🚨")
 
         except Exception as e:
