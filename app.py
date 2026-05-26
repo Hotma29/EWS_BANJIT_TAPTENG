@@ -31,12 +31,12 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- 2. FUNGSI LOAD MODEL (Update Nama File 9 Fitur) ---
+# --- 2. FUNGSI LOAD MODEL (Update Nama File Terbaru: Akurasi 100%) ---
 @st.cache_resource
 def load_smart_model():
-    # Menggunakan file .pkl dari kodingan training 9 fitur
-    model = joblib.load('model_banjir_.pkl')
-    le = joblib.load('label_encoder_.pkl')
+    # Load model yang sudah dilatih murni dengan 3 fitur
+    model = joblib.load('model_banjirrr.pkl')
+    le = joblib.load('label_encoderrr.pkl')
     return model, le
 
 # --- 3. FUNGSI KIRIM TELEGRAM (KHUSUS SIMULASI) ---
@@ -136,7 +136,7 @@ with tab1:
         st.error(f"Koneksi Database Bermasalah: {e}")
 
 with tab2:
-    st.header("🧪 Simulasi Analisis AI (Random Forest 9 Fitur)")
+    st.header("🧪 Simulasi Analisis AI (Random Forest 3 Fitur REP)")
     col_a, col_b = st.columns(2)
     with col_a:
         st.markdown("### 📍 Input Hulu Tukka")
@@ -153,7 +153,7 @@ with tab2:
         try:
             model, le = load_smart_model()
             
-            # 1. CARI LOKASI TERPARAH UNTUK MENGISI FITUR _REP
+            # 1. CARI LOKASI TERPARAH UNTUK MENJADI REPRESENTATIF (REP)
             skor_tukka = max(s1, s2)
             skor_sibabangun = max(s4, s5)
             
@@ -162,15 +162,11 @@ with tab2:
             else:
                 rep_station, rain_rep, rain3_rep, rh_rep = "Sibabangun (Muara)", s4, s5, s6
             
-            # 2. BENTUK DATAFRAME 9 FITUR (Persis urutan saat training!)
-            features = [
-                'RAIN_TUKKA', 'RAIN3_TUKKA', 'RH_TUKKA',
-                'RAIN_SBBN', 'RAIN3_SBBN', 'RH_SBBN',
-                'RAIN_REP', 'RAIN3_REP', 'RH_REP'
-            ]
+            # 2. BENTUK DATAFRAME MURNI 3 FITUR (Persis urutan saat training dataset 1 titik)
+            features = ['RAIN', 'RAIN3', 'RH']
             
-            # Memasukkan semua 9 data (s1 sampai s6 + 3 data rep)
-            input_df = pd.DataFrame([[s1, s2, s3, s4, s5, s6, rain_rep, rain3_rep, rh_rep]], columns=features)
+            # Memasukkan HANYA 3 data dari stasiun pemenang
+            input_df = pd.DataFrame([[rain_rep, rain3_rep, rh_rep]], columns=features)
             
             # 3. PREDIKSI
             pred = model.predict(input_df)
@@ -178,7 +174,7 @@ with tab2:
             conf = np.max(model.predict_proba(input_df)) * 100
 
             st.markdown("---")
-            st.info(f"🔍 **Analisis Spasial:** Representasi fitur REP saat ini diambil dari kondisi **{rep_station}**.")
+            st.info(f"🔍 **Analisis Spasial:** Representasi fitur (REP) saat ini diambil dari kondisi **{rep_station}** karena memiliki potensi ancaman lebih tinggi.")
             
             color_res = "#1b5e20" if status_sim == "RENDAH" else "#e65100" if status_sim == "SEDANG" else "#b71c1c"
             st.markdown(f"""
