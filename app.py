@@ -31,7 +31,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- 2. FUNGSI LOAD MODEL (Update Nama File Terbaru: Akurasi 100%) ---
+# --- 2. FUNGSI LOAD MODEL ---
 @st.cache_resource
 def load_smart_model():
     # Load model yang sudah dilatih murni dengan 3 fitur
@@ -61,7 +61,7 @@ def send_telegram_simulation(status, station, rain, rain3, rh, conf):
 # --- 4. FUNGSI HELPER API (Live Demo Sidebar) ---
 def fetch_api_only():
     try:
-        # Titik Hutanabolon & Muara Sibuntoan
+        # Titik Hulu Tukka & Hulu Sibabangun
         res_t = requests.get(f"https://api.openweathermap.org/data/2.5/weather?lat=1.699608&lon=98.910028&appid={API_KEY}&units=metric", timeout=10).json()
         res_s = requests.get(f"https://api.openweathermap.org/data/2.5/weather?lat=1.541647&lon=98.993431&appid={API_KEY}&units=metric", timeout=10).json()
         return res_t, res_s
@@ -75,11 +75,11 @@ with st.sidebar:
         rt, rs = fetch_api_only()
         if rt and rs:
             st.success("Koneksi API Berhasil!")
-            st.markdown("### 📍 Hulu Tukka (Hutanabolon)")
+            st.markdown("### 📍 Hulu Tukka")
             st.write(f"- **Hujan (1 Jam):** {rt.get('rain',{}).get('1h', 0.0)} mm")
             st.write(f"- **Kelembapan:** {rt['main']['humidity']}%")
             st.divider()
-            st.markdown("### 📍 Hilir Sibabangun (Muara)")
+            st.markdown("### 📍 Hulu Sibabangun")
             st.write(f"- **Hujan (1 Jam):** {rs.get('rain',{}).get('1h', 0.0)} mm")
             st.write(f"- **Kelembapan:** {rs['main']['humidity']}%")
             st.caption("ℹ️ Data simulasi API ini tidak disimpan ke database.")
@@ -91,9 +91,10 @@ tab1, tab2 = st.tabs(["📊 Monitoring Real-Time", "🧪 Laboratorium AI (Simula
 with tab1:
     try:
         conn = psycopg2.connect(DB_URL)
+        # PERBAIKAN: Mengubah _btr menjadi _sbbn agar sesuai database terbaru
         query = """
             SELECT tanggal, created_at, prediksi, rain_tuk, rain_tuk_latest, rh_tuk_latest,
-                   rain_btr, rain_btr_latest, rh_btr_latest
+                   rain_sbbn, rain_sbbn_latest, rh_sbbn_latest
             FROM histori_harian ORDER BY tanggal DESC, created_at DESC LIMIT 7
         """
         df_db = pd.read_sql_query(query, conn)
@@ -118,20 +119,24 @@ with tab1:
             with c2: st.metric("Hujan 1jam Terakhir", f"{latest['rain_tuk_latest']:.2f} mm")
             with c3: st.metric("RH Terakhir", f"{latest['rh_tuk_latest']:.1f} %")
 
-            st.subheader("📍 Pemantauan Hilir Sibabangun (Muara Sibuntoan)")
+            # PERBAIKAN: Variabel pemanggilan data untuk Sibabangun
+            st.subheader("📍 Pemantauan Hulu Sibabangun")
             c4, c5, c6 = st.columns(3)
-            with c4: st.metric("Hujan Total Hari Ini ", f"{latest['rain_btr']:.2f} mm")
-            with c5: st.metric("Hujan 1jam Terakhir ", f"{latest['rain_btr_latest']:.2f} mm")
-            with c6: st.metric("RH Terakhir ", f"{latest['rh_btr_latest']:.1f} %")
+            with c4: st.metric("Hujan Total Hari Ini ", f"{latest['rain_sbbn']:.2f} mm")
+            with c5: st.metric("Hujan 1jam Terakhir ", f"{latest['rain_sbbn_latest']:.2f} mm")
+            with c6: st.metric("RH Terakhir ", f"{latest['rh_sbbn_latest']:.1f} %")
 
             st.markdown("---")
             st.subheader("📊 Perbandingan Hujan Harian (7 Hari Terakhir)")
             df_plot = df_db.sort_values('tanggal')
             fig = go.Figure()
-            fig.add_trace(go.Bar(x=df_plot['tanggal'], y=df_plot['rain_tuk'], name='Tukka', marker_color='#1976d2'))
-            fig.add_trace(go.Bar(x=df_plot['tanggal'], y=df_plot['rain_btr'], name='Sibabangun', marker_color='#ef5350'))
+            fig.add_trace(go.Bar(x=df_plot['tanggal'], y=df_plot['rain_tuk'], name='Hulu Tukka', marker_color='#1976d2'))
+            # PERBAIKAN: Plotting grafik menggunakan data rain_sbbn
+            fig.add_trace(go.Bar(x=df_plot['tanggal'], y=df_plot['rain_sbbn'], name='Hulu Sibabangun', marker_color='#ef5350'))
             fig.update_layout(barmode='group', template="plotly_white", height=350)
             st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.warning("Belum ada data histori harian di Database.")
     except Exception as e:
         st.error(f"Koneksi Database Bermasalah: {e}")
 
@@ -144,7 +149,7 @@ with tab2:
         s2 = st.number_input("Akumulasi 3 Hari (mm)", 0.0, 500.0, 20.0, key="sim2")
         s3 = st.slider("Kelembapan / RH (%)", 0, 100, 80, key="sim3")
     with col_b:
-        st.markdown("### 📍 Input Hilir Sibabangun (SBBN)")
+        st.markdown("### 📍 Input Hulu Sibabangun")
         s4 = st.number_input("Hujan Hari Ini (mm) ", 0.0, 300.0, 5.0, key="sim4")
         s5 = st.number_input("Akumulasi 3 Hari (mm) ", 0.0, 500.0, 10.0, key="sim5")
         s6 = st.slider("Kelembapan / RH (%) ", 0, 100, 75, key="sim6")
@@ -158,9 +163,9 @@ with tab2:
             skor_sibabangun = max(s4, s5)
             
             if skor_tukka >= skor_sibabangun:
-                rep_station, rain_rep, rain3_rep, rh_rep = "Tukka (Hutanabolon)", s1, s2, s3
+                rep_station, rain_rep, rain3_rep, rh_rep = "Hulu Tukka", s1, s2, s3
             else:
-                rep_station, rain_rep, rain3_rep, rh_rep = "Sibabangun (Muara)", s4, s5, s6
+                rep_station, rain_rep, rain3_rep, rh_rep = "Hulu Sibabangun", s4, s5, s6
             
             # 2. BENTUK DATAFRAME MURNI 3 FITUR (Persis urutan saat training dataset 1 titik)
             features = ['RAIN', 'RAIN3', 'RH']
