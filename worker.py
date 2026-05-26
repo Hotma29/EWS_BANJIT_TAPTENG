@@ -13,7 +13,7 @@ BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 CHANNEL_ID = os.getenv("TELEGRAM_CHANNEL_ID")
 DB_URL = os.getenv("SUPABASE_DB_URL")
 
-# Konfigurasi Titik Pantau Berdasarkan Analisis Spasial Terbaru
+# Konfigurasi Titik Pantau Berdasarkan Analisis Spasial
 LOCS = {
     "Tukka": {
         "lat": 1.699608, # Hutanabolon (Hulu Kritis)
@@ -73,103 +73,98 @@ def run_system():
     if not conn: return 
 
     try:
-        # C. UPSERT DATA (Kolom DB tetap rain_btr agar tidak merusak schema, tapi datanya SIBABANGUN)
+        # C. UPSERT DATA (Memakai skema tabel terbaru dengan kolom _sbbn)
         cur.execute("""
             INSERT INTO histori_harian (
                 tanggal, created_at, 
-                rain_tuk, rain_btr, 
-                rh_tuk_avg, rh_btr_avg, 
-                rh_tuk_latest, rh_btr_latest,
-                rain_tuk_latest, rain_btr_latest,
+                rain_tuk, rain_tuk_latest, rh_tuk_latest, 
+                rain_sbbn, rain_sbbn_latest, rh_sbbn_latest,
                 entry_count
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 1)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 1)
             ON CONFLICT (tanggal) DO UPDATE SET
-                rain_tuk = histori_harian.rain_tuk + EXCLUDED.rain_tuk,
-                rain_btr = histori_harian.rain_btr + EXCLUDED.rain_btr,
-                rh_tuk_avg = (histori_harian.rh_tuk_avg * histori_harian.entry_count + EXCLUDED.rh_tuk_avg) / (histori_harian.entry_count + 1),
-                rh_btr_avg = (histori_harian.rh_btr_avg * histori_harian.entry_count + EXCLUDED.rh_btr_avg) / (histori_harian.entry_count + 1),
-                rh_tuk_latest = EXCLUDED.rh_tuk_latest,
-                rh_btr_latest = EXCLUDED.rh_btr_latest,
+                rain_tuk = histori_harian.rain_tuk + EXCLUDED.rain_tuk_latest,
+                rain_sbbn = histori_harian.rain_sbbn + EXCLUDED.rain_sbbn_latest,
                 rain_tuk_latest = EXCLUDED.rain_tuk_latest,
-                rain_btr_latest = EXCLUDED.rain_btr_latest,
+                rain_sbbn_latest = EXCLUDED.rain_sbbn_latest,
+                rh_tuk_latest = EXCLUDED.rh_tuk_latest,
+                rh_sbbn_latest = EXCLUDED.rh_sbbn_latest,
                 entry_count = histori_harian.entry_count + 1,
                 created_at = EXCLUDED.created_at
-            RETURNING rain_tuk, rain_btr;
-        """, (tgl, waktu_lengkap, rt_hour, rs_hour, rht, rhs, rht, rhs, rt_hour, rs_hour))
+            RETURNING rain_tuk, rain_sbbn;
+        """, (tgl, waktu_lengkap, rt_hour, rt_hour, rht, rs_hour, rs_hour, rhs))
         
         db_res = cur.fetchone()
         total_harian_tuk, total_harian_sibabangun = db_res[0], db_res[1]
 
-        # D. Ambil Histori 3 Hari
-        cur.execute("SELECT rain_tuk, rain_btr FROM histori_harian ORDER BY tanggal DESC LIMIT 3")
+        # D. Ambil Histori 3 Hari (Untuk hitung RAIN3)
+        cur.execute("SELECT rain_tuk, rain_sbbn FROM histori_harian ORDER BY tanggal DESC LIMIT 3")
         rows = cur.fetchall()
         acc3_t = sum(r[0] for r in rows)
         acc3_s = sum(r[1] for r in rows)
         
-        # E. Feature Engineering (Update Nama Variabel Skor)
+        # E. PENCARIAN TITIK TERPARAH (REPRESENTATIF / REP)
         skor_tukka = max(total_harian_tuk, acc3_t)
         skor_sibabangun = max(total_harian_sibabangun, acc3_s)
         
         if skor_tukka >= skor_sibabangun:
-            rain_max, rain3_max, rh_max = total_harian_tuk, acc3_t, rht
+            rain_rep, rain3_rep, rh_rep = total_harian_tuk, acc3_t, rht
+            lokasi_nama = 'Tukka (Hutanabolon)'
         else:
-            rain_max, rain3_max, rh_max = total_harian_sibabangun, acc3_s, rhs
-            
-        rata_rh = (rht + rhs) / 2
+            rain_rep, rain3_rep, rh_rep = total_harian_sibabangun, acc3_s, rhs
+            lokasi_nama = 'Sibabangun (Muara)'
 
-        # F. Logika Prediksi (Hybrid Pure)
+        # F. LOGIKA PREDIKSI (HYBRID: FAIL-SAFE BMKG + AI)
+        # Cek langsung data tarikan 1 jam terakhir dari API (rt_hour / rs_hour)
         if rt_hour >= 20.0 or rs_hour >= 20.0:
             status = "TINGGI"
-            logika = "Fail-Safe: Hujan Instan Sangat Lebat (Bypass AI)"
-            
+            logika = "Bypass BMKG: Hujan Instan Sangat Lebat (>20mm/jam)"
         elif rt_hour >= 10.0 or rs_hour >= 10.0:
             status = "SEDANG"
-            logika = "Fail-Safe: Hujan Instan Lebat (Bypass AI)"
-            
+            logika = "Bypass BMKG: Hujan Instan Lebat (>10mm/jam)"
         else:
+            # Jika hujan per jam normal, biarkan AI yang memikirkan bahaya akumulasinya
             try:
-                model = joblib.load('model_banjir_.pkl')
-                le = joblib.load('label_encoder_.pkl')
+                model = joblib.load('model_banjirrr.pkl')
+                le = joblib.load('label_encoderrr.pkl')
                 
-                features = ['RAIN_TUKKA', 'RAIN3_TUKKA', 'RH_TUKKA', 'RAIN_BTR', 'RAIN3_BTR', 'RHBTR', 'RATA-RATA_RH', 'RAIN_MAX', 'RAIN3_MAX', 'RH_MAX']
-                input_df = pd.DataFrame([[total_harian_tuk, acc3_t, rht, total_harian_sibabangun, acc3_s, rhs, rata_rh, rain_max, rain3_max, rh_max]], columns=features)
+                features = ['RAIN', 'RAIN3', 'RH']
+                input_df = pd.DataFrame([[rain_rep, rain3_rep, rh_rep]], columns=features)
                 
                 pred = model.predict(input_df)
                 status = le.inverse_transform(pred)[0]
-                logika = "Analisis AI Random Forest"
-            except:
+                logika = "Analisis AI Random Forest (3 Fitur REP)"
+            except Exception as ai_err:
+                print(f"Error AI: {ai_err}")
                 status, logika = "RENDAH", "Fallback: Model Loading Error"
 
         # G. Update Prediksi ke Database
         cur.execute("UPDATE histori_harian SET prediksi = %s WHERE tanggal = %s", (status, tgl))
         conn.commit()
-        print(f"Hasil: {status} | {logika}")
+        print(f"Hasil Prediksi: {status} | Lokasi REP: {lokasi_nama} | {logika}")
 
-        # H. Notifikasi Telegram (Pesan Himbauan Dinamis, Simpel, & Objektif)
+        # H. Notifikasi Telegram
         if status in ["SEDANG", "TINGGI"]:
             if status == "SEDANG":
                 emoji = "⚠️"
                 pesan_himbauan = (
                     "*STATUS: WASPADA (SEDANG)*\n"
-                    "Terdeteksi curah hujan lebat atau akumulasi air yang meningkat di wilayah hulu. "
+                    "Terdeteksi curah hujan lebat atau akumulasi air yang meningkat. "
                     "Mohon tetap waspada terhadap potensi kenaikan debit air sungai."
                 )
             else:  # Jika STATUS == TINGGI
                 emoji = "🚨"
                 pesan_himbauan = (
                     "*🚨 STATUS: BAHAYA (TINGGI) 🚨*\n"
-                    "Terdeteksi curah hujan sangat lebat atau akumulasi air tingkat kritis di wilayah hulu. "
+                    "Terdeteksi curah hujan sangat lebat atau akumulasi air tingkat kritis. "
                     "Mohon segera bersiap-siap untuk mengantisipasi potensi banjir kiriman."
                 )
-                
-            lokasi_nama = 'Tukka (Hutanabolon)' if skor_tukka >= skor_sibabangun else 'Sibabangun (Muara)'
             
             msg = (f"{emoji} *EWS BANJIR TAPTENG: {status}* {emoji}\n\n"
-                   f"📍 *Lokasi Pantau:* {lokasi_nama}\n"
-                   f"🌧️ *Hujan Hari Ini:* {rain_max:.1f} mm\n"
-                   f"🌊 *Hujan Akumulasi (3 Hari):* {rain3_max:.1f} mm\n"
-                   f"💧 *Kelembapan:* {rh_max}%\n"
+                   f"📍 *Titik Pantau Terparah:* {lokasi_nama}\n"
+                   f"🌧️ *Hujan Hari Ini (Akumulasi):* {rain_rep:.1f} mm\n"
+                   f"🌊 *Hujan Akumulasi (3 Hari):* {rain3_rep:.1f} mm\n"
+                   f"💧 *Kelembapan:* {rh_rep}%\n"
                    f"⚙️ *Mekanisme:* {logika}\n\n"
                    f"📢 *Info:* {pesan_himbauan}")
             
