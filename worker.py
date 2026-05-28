@@ -125,8 +125,8 @@ def run_system():
         else:
             # Jika hujan per jam normal, biarkan AI yang memikirkan bahaya akumulasinya
             try:
-                model = joblib.load('model_banjirrr.pkl')
-                le = joblib.load('label_encoderrr.pkl')
+                model = joblib.load('model_banjirr.pkl')
+                le = joblib.load('label_encoderr.pkl')
                 
                 features = ['RAIN', 'RAIN3', 'RH']
                 input_df = pd.DataFrame([[rain_rep, rain3_rep, rh_rep]], columns=features)
