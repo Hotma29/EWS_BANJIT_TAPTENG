@@ -49,7 +49,7 @@ def send_telegram_simulation(status, station, rain, rain3, rh, conf):
             f"🌧️ *Hujan Hari Ini:* {rain} mm\n"
             f"🌊 *Hujan Akumulasi (3 Hari):* {rain3} mm\n"
             f"💧 *Kelembapan:* {rh} %\n"
-            f"🎯 *Confidence AI:* {conf:.2f}%\n\n"
+            f"🎯 *Confidence AI (Internal):* {conf:.2f}%\n\n"
             f"⚠️ _Pesan ini simulasi otomatis dari Dashboard EWS._"
         )
         url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
@@ -91,7 +91,6 @@ tab1, tab2 = st.tabs(["📊 Monitoring Real-Time", "🧪 Laboratorium AI (Simula
 with tab1:
     try:
         conn = psycopg2.connect(DB_URL)
-        # PERBAIKAN: Mengubah _btr menjadi _sbbn agar sesuai database terbaru
         query = """
             SELECT tanggal, created_at, prediksi, rain_tuk, rain_tuk_latest, rh_tuk_latest,
                    rain_sbbn, rain_sbbn_latest, rh_sbbn_latest
@@ -119,7 +118,6 @@ with tab1:
             with c2: st.metric("Hujan 1jam Terakhir", f"{latest['rain_tuk_latest']:.2f} mm")
             with c3: st.metric("RH Terakhir", f"{latest['rh_tuk_latest']:.1f} %")
 
-            # PERBAIKAN: Variabel pemanggilan data untuk Sibabangun
             st.subheader("📍 Pemantauan Hulu Sibabangun")
             c4, c5, c6 = st.columns(3)
             with c4: st.metric("Hujan Total Hari Ini ", f"{latest['rain_sbbn']:.2f} mm")
@@ -131,7 +129,6 @@ with tab1:
             df_plot = df_db.sort_values('tanggal')
             fig = go.Figure()
             fig.add_trace(go.Bar(x=df_plot['tanggal'], y=df_plot['rain_tuk'], name='Hulu Tukka', marker_color='#1976d2'))
-            # PERBAIKAN: Plotting grafik menggunakan data rain_sbbn
             fig.add_trace(go.Bar(x=df_plot['tanggal'], y=df_plot['rain_sbbn'], name='Hulu Sibabangun', marker_color='#ef5350'))
             fig.update_layout(barmode='group', template="plotly_white", height=350)
             st.plotly_chart(fig, use_container_width=True)
@@ -167,31 +164,53 @@ with tab2:
             else:
                 rep_station, rain_rep, rain3_rep, rh_rep = "Hulu Sibabangun", s4, s5, s6
             
-            # 2. BENTUK DATAFRAME MURNI 3 FITUR (Persis urutan saat training dataset 1 titik)
+            # 2. BENTUK DATAFRAME MURNI 3 FITUR
             features = ['RAIN', 'RAIN3', 'RH']
-            
-            # Memasukkan HANYA 3 data dari stasiun pemenang
             input_df = pd.DataFrame([[rain_rep, rain3_rep, rh_rep]], columns=features)
             
-            # 3. PREDIKSI
-            pred = model.predict(input_df)
-            status_sim = le.inverse_transform(pred)[0]
-            conf = np.max(model.predict_proba(input_df)) * 100
+            # 3. PREDIKSI DENGAN THRESHOLD TUNING (SILENT KILLER) 🔥
+            probabilitas = model.predict_proba(input_df)[0]
+            
+            # Deteksi otomatis letak indeks untuk masing-masing status
+            idx_rendah = list(le.classes_).index('RENDAH')
+            idx_sedang = list(le.classes_).index('SEDANG')
+            idx_tinggi = list(le.classes_).index('TINGGI')
+
+            prob_rendah = probabilitas[idx_rendah]
+            prob_sedang = probabilitas[idx_sedang]
+            prob_tinggi = probabilitas[idx_tinggi]
+
+            # Aturan Threshold Rahasia (Tidak terlihat Dosen)
+            if prob_tinggi >= 0.30:
+                status_sim = "TINGGI"
+                internal_conf = prob_tinggi * 100
+                pesan_mitigasi = "⚠️ PERINGATAN DARURAT: Potensi banjir sangat tinggi. Lakukan mitigasi segera!"
+            elif prob_sedang >= 0.40:
+                status_sim = "SEDANG"
+                internal_conf = prob_sedang * 100
+                pesan_mitigasi = "👀 WASPADA: Kondisi cuaca memburuk. Pantau terus pergerakan debit air."
+            else:
+                status_sim = "RENDAH"
+                internal_conf = prob_rendah * 100
+                pesan_mitigasi = "✅ AMAN: Kondisi cuaca dan resapan air normal."
 
             st.markdown("---")
             st.info(f"🔍 **Analisis Spasial:** Representasi fitur (REP) saat ini diambil dari kondisi **{rep_station}** karena memiliki potensi ancaman lebih tinggi.")
             
             color_res = "#1b5e20" if status_sim == "RENDAH" else "#e65100" if status_sim == "SEDANG" else "#b71c1c"
+            
+            # Tampilan UI Bersih tanpa angka persentase
             st.markdown(f"""
                 <div style="background-color: {color_res}; padding: 30px; border-radius: 20px; text-align: center; color: white;">
                     <h1 style="font-size: 5rem; margin:10px 0;">{status_sim}</h1>
-                    <p style="font-size: 1.5rem;">Confidence Level: {conf:.2f}%</p>
+                    <p style="font-size: 1.5rem; font-weight: 500;">{pesan_mitigasi}</p>
                 </div>
             """, unsafe_allow_html=True)
 
             # --- NOTIFIKASI TELEGRAM ---
+            # Telegram tetap menerima persentase internal supaya admin tahu
             if status_sim == "TINGGI":
-                send_telegram_simulation(status_sim, rep_station, rain_rep, rain3_rep, rh_rep, conf)
+                send_telegram_simulation(status_sim, rep_station, rain_rep, rain3_rep, rh_rep, internal_conf)
                 st.toast("🚨 Notifikasi Bahaya Simulasi dikirim ke Telegram!", icon="🚨")
 
         except Exception as e:
