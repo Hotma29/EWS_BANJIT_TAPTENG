@@ -35,8 +35,8 @@ st.markdown("""
 @st.cache_resource
 def load_smart_model():
     # Load model yang sudah dilatih murni dengan 3 fitur
-    model = joblib.load('model_banjirrrr.pkl')
-    le = joblib.load('label_encoderrrr.pkl')
+    model = joblib.load('model_banjiir.pkl')
+    le = joblib.load('label_encodeer.pkl')
     return model, le
 
 # --- 3. FUNGSI KIRIM TELEGRAM (KHUSUS SIMULASI) ---
