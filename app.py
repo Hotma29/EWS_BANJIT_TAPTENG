@@ -85,7 +85,7 @@ with st.sidebar:
             st.caption("ℹ️ Data simulasi API ini tidak disimpan ke database.")
 
 # --- 6. MAIN DASHBOARD ---
-st.title("🌊 Smart Flood Early Warning System (Tapanuli Tengah)")
+st.title("🌊 Sistem Peringatan Dini Potensi Banjir Bandang (Tapanuli Tengah)")
 tab1, tab2 = st.tabs(["📊 Monitoring Real-Time", "🧪 Laboratorium AI (Simulasi)"])
 
 with tab1:
@@ -112,7 +112,7 @@ with tab1:
                 </div>
             """, unsafe_allow_html=True)
 
-            st.subheader("📍 Pemantauan Hulu Tukka (Hutanabolon)")
+            st.subheader("📍 Pemantauan Hulu Tukka ")
             c1, c2, c3 = st.columns(3)
             with c1: st.metric("Hujan Total Hari Ini", f"{latest['rain_tuk']:.2f} mm")
             with c2: st.metric("Hujan 1jam Terakhir", f"{latest['rain_tuk_latest']:.2f} mm")
@@ -151,7 +151,7 @@ with tab2:
         s5 = st.number_input("Akumulasi 3 Hari (mm) ", 0.0, 500.0, 10.0, key="sim5")
         s6 = st.slider("Kelembapan / RH (%) ", 0, 100, 75, key="sim6")
 
-    if st.button("🚀 Jalankan Analisis AI", type="primary", use_container_width=True):
+    if st.button("🚀 Jalankan Analisis AI (Random Forest)", type="primary", use_container_width=True):
         try:
             model, le = load_smart_model()
             
