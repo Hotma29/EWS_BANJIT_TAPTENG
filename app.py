@@ -213,14 +213,14 @@ with tab2:
                 status_sim = "TINGGI"
                 logika = "Hujan Instan Lebat/Sangat Lebat (>=10 mm/jam)"
                 is_instan = True
-                pesan_mitigasi = "⚠️ PERINGATAN DARURAT: Hujan badai mendadak. Potensi BANJIR BANDANG KILAT!"
+                pesan_mitigasi = "⚠️ PERINGATAN DARURAT: Hujan badai mendadak (1 jam terkahir). Potensi BANJIR BANDANG KILAT!"
             
             # Lapis 2: Cek Hujan Instan Sedang
             elif s_instan1 >= 5.0 or s_instan2 >= 5.0:
                 status_sim = "SEDANG"
                 logika = "Hujan Instan Sedang (5 - 10 mm/jam)"
                 is_instan = True
-                pesan_mitigasi = "👀 WASPADA: Hujan instan cukup lebat. Pantau terus pergerakan debit air."
+                pesan_mitigasi = "👀 WASPADA: Hujan instan (1 jam terakhir) cukup lebat. Pantau terus pergerakan debit air."
             
             # Lapis 3: Jika Hujan Instan aman, Biarkan AI Menganalisis Akumulasi Hariannya
             else:
