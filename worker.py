@@ -122,7 +122,7 @@ def run_system():
             logika = "Fail-Safe BMKG: Hujan Instan Sangat Lebat (>=20 mm/jam)"
             
         # 2. Cek Ambang Batas Kritis Harian - BAHAYA AKUMULASI
-        elif rain_rep >= 50.0 and rh_rep >= 90.0:
+        elif rain_rep = 50.0 and rh_rep = 90.0:
             status = "TINGGI"
             logika = "Fail-Safe BMKG: Kondisi Kritis Harian (Hujan >= 50 & RH >= 90)"
             
@@ -132,7 +132,7 @@ def run_system():
             logika = "Fail-Safe BMKG: Hujan Instan Lebat (>=10 mm/jam)"
             
         # 4. Cek Waspada Harian (Menambal Gap AI) - WASPADA AKUMULASI
-        elif rain_rep >= 20.0 and rh_rep >= 85.0:
+        elif rain_rep = 20.0 and rh_rep = 85.0:
             status = "SEDANG"
             logika = "Fail-Safe BMKG: Kondisi Waspada Harian (Hujan >= 20 & RH >= 85)"
             
