@@ -119,24 +119,24 @@ def run_system():
         # 1. Cek Hujan Instan Sangat Lebat (Per Jam) - BAHAYA MUTLAK
         if rt_hour >= 10.0 or rs_hour >= 10.0:
             status = "TINGGI"
-            logika = "Fail-Safe BMKG: Hujan Instan Sangat Lebat (>=20 mm/jam)"
+            logika = "Fail-Safe BMKG: Hujan Instan Lebat/Sangat Lebat (>=10 mm/jam)"
             
-        # 2. Cek Ambang Batas Kritis Harian - BAHAYA AKUMULASI
-        elif rain_rep = 50.0 and rh_rep = 90.0:
+        # 2. Cek Titik Buta Model (Boundary Patching) - PAS DI ANGKA 50 & 90
+        elif rain_rep == 50.0 and rh_rep == 90.0:
             status = "TINGGI"
-            logika = "Fail-Safe BMKG: Kondisi Kritis Harian (Hujan >= 50 & RH >= 90)"
+            logika = "Fail-Safe BMKG: Menambal Boundary Model (Hujan Tepat 50 mm & RH 90%)"
             
-        # 3. Cek Waspada Hujan Instan Lebat (Per Jam) - WASPADA INSTAN
+        # 3. Cek Waspada Hujan Instan Sedang (Per Jam) - WASPADA INSTAN
         elif rt_hour >= 5.0 or rs_hour >= 5.0:
             status = "SEDANG"
-            logika = "Fail-Safe BMKG: Hujan Instan Lebat (>=10 mm/jam)"
+            logika = "Fail-Safe BMKG: Hujan Instan Sedang (5 - 10 mm/jam)"
             
-        # 4. Cek Waspada Harian (Menambal Gap AI) - WASPADA AKUMULASI
-        elif rain_rep = 20.0 and rh_rep = 85.0:
+        # 4. Cek Titik Buta Model (Boundary Patching) - PAS DI ANGKA 20 & 85
+        elif rain_rep == 20.0 and rh_rep == 85.0:
             status = "SEDANG"
-            logika = "Fail-Safe BMKG: Kondisi Waspada Harian (Hujan >= 20 & RH >= 85)"
+            logika = "Fail-Safe BMKG: Menambal Boundary Model (Hujan Tepat 20 mm & RH 85%)"
             
-        # 5. Jika kondisi hujan normal, serahkan analisis ke AI Random Forest
+        # 5. Model AI mengambil alih sisa probabilitas lainnya
         else:
             try:
                 model = joblib.load('model_banjirrrr.pkl')
@@ -145,9 +145,29 @@ def run_system():
                 features = ['RAIN', 'RAIN3', 'RH']
                 input_df = pd.DataFrame([[rain_rep, rain3_rep, rh_rep]], columns=features)
                 
-                pred = model.predict(input_df)
-                status = le.inverse_transform(pred)[0]
-                logika = "Analisis AI Random Forest (Mempertimbangkan Akumulasi 3 Hari)"
+                # Menggunakan predict_proba sesuai di UI
+                probabilitas = model.predict_proba(input_df)[0]
+                
+                # Mendapatkan letak index class otomatis
+                idx_rendah = list(le.classes_).index('RENDAH')
+                idx_sedang = list(le.classes_).index('SEDANG')
+                idx_tinggi = list(le.classes_).index('TINGGI')
+
+                prob_rendah = probabilitas[idx_rendah]
+                prob_sedang = probabilitas[idx_sedang]
+                prob_tinggi = probabilitas[idx_tinggi]
+
+                # Threshold Tuning / Silent Killer
+                if prob_tinggi >= 0.30:
+                    status = "TINGGI"
+                    logika = f"Analisis AI (Confidence TINGGI: {prob_tinggi*100:.1f}%)"
+                elif prob_sedang >= 0.40:
+                    status = "SEDANG"
+                    logika = f"Analisis AI (Confidence SEDANG: {prob_sedang*100:.1f}%)"
+                else:
+                    status = "RENDAH"
+                    logika = f"Analisis AI (Confidence RENDAH: {prob_rendah*100:.1f}%)"
+                    
             except Exception as ai_err:
                 print(f"Error AI: {ai_err}")
                 status, logika = "RENDAH", "Fallback: Model Loading Error"
@@ -173,8 +193,8 @@ def run_system():
                 else:
                     pesan_himbauan = (
                         "*STATUS: WASPADA (SEDANG)*\n"
-                        "Terdeteksi akumulasi curah hujan harian yang terus meningkat. "
-                        "Kondisi tanah mungkin sudah jenuh air, mohon tetap siaga."
+                        "Terdeteksi peningkatan akumulasi air atau probabilitas cuaca memburuk. "
+                         "Waspadai potensi debit air sungai yang bisa naik dengan cepat."
                     )
             
             else:  # Jika STATUS == TINGGI
@@ -182,14 +202,14 @@ def run_system():
                 if is_instan:
                     pesan_himbauan = (
                         "*🚨 STATUS: BAHAYA (TINGGI) 🚨*\n"
-                        "PERINGATAN! Terjadi hujan badai mendadak (sangat lebat) di wilayah hulu. "
-                        "Risiko BANJIR BANDANG KILAT sangat tinggi akibat minimnya resapan air. "
-                        "Segera siagakan tim mitigasi bencana!"
+                        "PERINGATAN! Terjadi hujan badai mendadak (lebat) di wilayah hulu. "
+                        "Risiko BANJIR BANDANG KILAT sangat tinggi."
+                        "Mohon segera lakukan langkah antisipasi dan evakuasi jika diperlukan!"
                     )
                 else:
                     pesan_himbauan = (
                         "*🚨 STATUS: BAHAYA (TINGGI) 🚨*\n"
-                        "PERINGATAN! Akumulasi curah hujan harian/3 hari telah mencapai titik kritis. "
+                        "PERINGATAN! Akumulasi curah hujan harian/3 hari atau probabilitas cuaca telah mencapai titik kritis. "
                         "Kapasitas sungai berpotensi meluap secara masif. "
                         "Mohon segera lakukan langkah antisipasi dan evakuasi jika diperlukan!"
                     )
