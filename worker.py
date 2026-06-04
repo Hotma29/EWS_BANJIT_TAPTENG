@@ -117,7 +117,7 @@ def run_system():
         # F. LOGIKA PREDIKSI (HYBRID: FAIL-SAFE BMKG + AI)
         
         # 1. Cek Hujan Instan Sangat Lebat (Per Jam) - BAHAYA MUTLAK
-        if rt_hour >= 20.0 or rs_hour >= 20.0:
+        if rt_hour >= 10.0 or rs_hour >= 10.0:
             status = "TINGGI"
             logika = "Fail-Safe BMKG: Hujan Instan Sangat Lebat (>=20 mm/jam)"
             
@@ -127,7 +127,7 @@ def run_system():
             logika = "Fail-Safe BMKG: Kondisi Kritis Harian (Hujan >= 50 & RH >= 90)"
             
         # 3. Cek Waspada Hujan Instan Lebat (Per Jam) - WASPADA INSTAN
-        elif rt_hour >= 10.0 or rs_hour >= 10.0:
+        elif rt_hour >= 5.0 or rs_hour >= 5.0:
             status = "SEDANG"
             logika = "Fail-Safe BMKG: Hujan Instan Lebat (>=10 mm/jam)"
             
