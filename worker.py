@@ -115,15 +115,29 @@ def run_system():
             lokasi_nama = 'Sibabangun (Muara)'
 
         # F. LOGIKA PREDIKSI (HYBRID: FAIL-SAFE BMKG + AI)
-        # Cek langsung data tarikan 1 jam terakhir dari API (rt_hour / rs_hour)
+        
+        # 1. Cek Hujan Instan Sangat Lebat (Per Jam) - BAHAYA MUTLAK
         if rt_hour >= 20.0 or rs_hour >= 20.0:
             status = "TINGGI"
-            logika = "Bypass BMKG: Hujan Instan Sangat Lebat (>20mm/jam)"
+            logika = "Fail-Safe BMKG: Hujan Instan Sangat Lebat (>=20 mm/jam)"
+            
+        # 2. Cek Ambang Batas Kritis Harian - BAHAYA AKUMULASI
+        elif rain_rep >= 50.0 and rh_rep >= 90.0:
+            status = "TINGGI"
+            logika = "Fail-Safe BMKG: Kondisi Kritis Harian (Hujan >= 50 & RH >= 90)"
+            
+        # 3. Cek Waspada Hujan Instan Lebat (Per Jam) - WASPADA INSTAN
         elif rt_hour >= 10.0 or rs_hour >= 10.0:
             status = "SEDANG"
-            logika = "Bypass BMKG: Hujan Instan Lebat (>10mm/jam)"
+            logika = "Fail-Safe BMKG: Hujan Instan Lebat (>=10 mm/jam)"
+            
+        # 4. Cek Waspada Harian (Menambal Gap AI) - WASPADA AKUMULASI
+        elif rain_rep >= 20.0 and rh_rep >= 85.0:
+            status = "SEDANG"
+            logika = "Fail-Safe BMKG: Kondisi Waspada Harian (Hujan >= 20 & RH >= 85)"
+            
+        # 5. Jika kondisi hujan normal, serahkan analisis ke AI Random Forest
         else:
-            # Jika hujan per jam normal, biarkan AI yang memikirkan bahaya akumulasinya
             try:
                 model = joblib.load('model_banjirrrr.pkl')
                 le = joblib.load('label_encoderrrr.pkl')
@@ -133,7 +147,7 @@ def run_system():
                 
                 pred = model.predict(input_df)
                 status = le.inverse_transform(pred)[0]
-                logika = "Analisis AI Random Forest (3 Fitur REP)"
+                logika = "Analisis AI Random Forest (Mempertimbangkan Akumulasi 3 Hari)"
             except Exception as ai_err:
                 print(f"Error AI: {ai_err}")
                 status, logika = "RENDAH", "Fallback: Model Loading Error"
@@ -143,29 +157,49 @@ def run_system():
         conn.commit()
         print(f"Hasil Prediksi: {status} | Lokasi REP: {lokasi_nama} | {logika}")
 
-        # H. Notifikasi Telegram
+        # H. Notifikasi Telegram Cerdas
         if status in ["SEDANG", "TINGGI"]:
+            # Identifikasi jenis pemicu berdasarkan kata kunci 'Instan' di variabel 'logika'
+            is_instan = "Instan" in logika
+            
             if status == "SEDANG":
                 emoji = "⚠️"
-                pesan_himbauan = (
-                    "*STATUS: WASPADA (SEDANG)*\n"
-                    "Terdeteksi curah hujan lebat atau akumulasi air yang meningkat. "
-                    "Mohon tetap waspada terhadap potensi kenaikan debit air sungai."
-                )
+                if is_instan:
+                    pesan_himbauan = (
+                        "*STATUS: WASPADA (SEDANG)*\n"
+                        "Terdeteksi hujan mendadak (instan) yang cukup lebat di wilayah hulu. "
+                        "Waspadai potensi debit air sungai yang bisa naik dengan cepat."
+                    )
+                else:
+                    pesan_himbauan = (
+                        "*STATUS: WASPADA (SEDANG)*\n"
+                        "Terdeteksi akumulasi curah hujan harian yang terus meningkat. "
+                        "Kondisi tanah mungkin sudah jenuh air, mohon tetap siaga."
+                    )
+            
             else:  # Jika STATUS == TINGGI
                 emoji = "🚨"
-                pesan_himbauan = (
-                    "*🚨 STATUS: BAHAYA (TINGGI) 🚨*\n"
-                    "Terdeteksi curah hujan sangat lebat atau akumulasi air tingkat kritis. "
-                    "Mohon segera bersiap-siap untuk mengantisipasi potensi banjir kiriman."
-                )
+                if is_instan:
+                    pesan_himbauan = (
+                        "*🚨 STATUS: BAHAYA (TINGGI) 🚨*\n"
+                        "PERINGATAN! Terjadi hujan badai mendadak (sangat lebat) di wilayah hulu. "
+                        "Risiko BANJIR BANDANG KILAT sangat tinggi akibat minimnya resapan air. "
+                        "Segera siagakan tim mitigasi bencana!"
+                    )
+                else:
+                    pesan_himbauan = (
+                        "*🚨 STATUS: BAHAYA (TINGGI) 🚨*\n"
+                        "PERINGATAN! Akumulasi curah hujan harian/3 hari telah mencapai titik kritis. "
+                        "Kapasitas sungai berpotensi meluap secara masif. "
+                        "Mohon segera lakukan langkah antisipasi dan evakuasi jika diperlukan!"
+                    )
             
             msg = (f"{emoji} *EWS BANJIR TAPTENG: {status}* {emoji}\n\n"
                    f"📍 *Titik Pantau Terparah:* {lokasi_nama}\n"
                    f"🌧️ *Hujan Hari Ini (Akumulasi):* {rain_rep:.1f} mm\n"
                    f"🌊 *Hujan Akumulasi (3 Hari):* {rain3_rep:.1f} mm\n"
                    f"💧 *Kelembapan:* {rh_rep}%\n"
-                   f"⚙️ *Mekanisme:* {logika}\n\n"
+                   f"⚙️ *Mekanisme Trigger:* {logika}\n\n"
                    f"📢 *Info:* {pesan_himbauan}")
             
             requests.get(f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage", 
