@@ -211,14 +211,14 @@ with tab2:
             # Lapis 1: Cek Hujan Instan Sangat Lebat
             if s_instan1 >= 10.0 or s_instan2 >= 10.0:
                 status_sim = "TINGGI"
-                logika = "Fail-Safe BMKG: Hujan Instan Lebat/Sangat Lebat (>=10 mm/jam)"
+                logika = "Hujan Instan Lebat/Sangat Lebat (>=10 mm/jam)"
                 is_instan = True
                 pesan_mitigasi = "⚠️ PERINGATAN DARURAT: Hujan badai mendadak. Potensi BANJIR BANDANG KILAT!"
             
             # Lapis 2: Cek Hujan Instan Sedang
             elif s_instan1 >= 5.0 or s_instan2 >= 5.0:
                 status_sim = "SEDANG"
-                logika = "Fail-Safe BMKG: Hujan Instan Sedang (5 - 10 mm/jam)"
+                logika = "Hujan Instan Sedang (5 - 10 mm/jam)"
                 is_instan = True
                 pesan_mitigasi = "👀 WASPADA: Hujan instan cukup lebat. Pantau terus pergerakan debit air."
             
@@ -256,7 +256,7 @@ with tab2:
 
             st.markdown("---")
             st.info(f"🔍 **Analisis Spasial:** Parameter Representatif (REP) diambil dari **{rep_station}** karena ancaman akumulasinya lebih tinggi.")
-            st.success(f"⚙️ **Mekanisme Pemicu:** {logika}")
+           
             
             color_res = "#1b5e20" if status_sim == "RENDAH" else "#e65100" if status_sim == "SEDANG" else "#b71c1c"
             
