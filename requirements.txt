@@ -7,3 +7,4 @@ requests
 plotly
 streamlit
 tenacity
+pytz
