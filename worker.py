@@ -5,7 +5,8 @@ import joblib
 import pandas as pd
 import numpy as np
 import time
-from datetime import datetime, timedelta
+from datetime import datetime
+import pytz
 
 # --- 1. KONFIGURASI (GITHUB SECRETS) ---
 API_KEY = os.getenv("OPENWEATHER_API_KEY")
@@ -49,12 +50,14 @@ def fetch_weather_with_retry(retries=3, delay=5):
 
 # --- 3. SISTEM UTAMA ---
 def run_system():
-    # Penentuan Waktu (WIB)
-    wib_now = datetime.utcnow() + timedelta(hours=7)
-    tgl = wib_now.strftime('%Y-%m-%d')
-    waktu_lengkap = wib_now.strftime('%Y-%m-%d %H:%M:%S')
+    # Penentuan Waktu (WIB) menggunakan pytz agar presisi di server maupun database
+    wib = pytz.timezone('Asia/Jakarta')
+    wib_now = datetime.now(wib)
     
-    print(f"\n--- SIKLUS EKSEKUSI: {waktu_lengkap} WIB ---")
+    tgl = wib_now.strftime('%Y-%m-%d')
+    waktu_lengkap = wib_now.strftime('%Y-%m-%d %H:%M:%S%z')
+    
+    print(f"\n--- SIKLUS EKSEKUSI: {waktu_lengkap} ---")
     
     # A. Ambil Data Cuaca
     rt_hour, rs_hour, rht, rhs = fetch_weather_with_retry()
@@ -203,14 +206,14 @@ def run_system():
                     pesan_himbauan = (
                         "*🚨 STATUS: BAHAYA (TINGGI) 🚨*\n"
                         "PERINGATAN! Terjadi hujan badai mendadak (lebat) di wilayah hulu. "
-                        "Risiko BANJIR BANDANG KILAT sangat tinggi."
+                        "Risiko BANJIR BANDANG KILAT sangat tinggi.\n"
                         "Mohon segera lakukan langkah antisipasi dan evakuasi jika diperlukan!"
                     )
                 else:
                     pesan_himbauan = (
                         "*🚨 STATUS: BAHAYA (TINGGI) 🚨*\n"
                         "PERINGATAN! Akumulasi curah hujan harian/3 hari atau probabilitas cuaca telah mencapai titik kritis. "
-                        "Kapasitas sungai berpotensi meluap secara masif. "
+                        "Kapasitas sungai berpotensi meluap secara masif.\n"
                         "Mohon segera lakukan langkah antisipasi dan evakuasi jika diperlukan!"
                     )
             
