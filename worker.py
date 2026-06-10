@@ -54,7 +54,7 @@ def run_system():
     tgl = wib_now.strftime('%Y-%m-%d')
     
     # PERUBAHAN FINAL: Tambahan +0700 agar terbaca persis sebagai jam Indonesia di Supabase
-    waktu_lengkap = wib_now.strftime('%Y-%m-%d %H:%M:%S+0700')
+    waktu_lengkap = wib_now.strftime('%Y-%m-%d %H:%M:%S')
     
     print(f"\n--- SIKLUS EKSEKUSI: {waktu_lengkap} WIB ---")
     
