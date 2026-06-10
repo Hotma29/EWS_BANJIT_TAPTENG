@@ -1,8 +1,8 @@
 name: Auto Weather Fetcher
 on:
   schedule:
-    # Digeser ke menit 13 agar terbebas dari antrean server global
-    - cron: '13 * * * *'
+    # Berjalan pada menit ke-3 setiap jam untuk menghindari antrean server
+    - cron: '3 * * * *'
   workflow_dispatch:
 
 jobs:
@@ -24,8 +24,6 @@ jobs:
           
       - name: Run Worker
         env:
-          # Memaksa server Ubuntu di GitHub memakai zona waktu Jakarta (WIB)
-          TZ: 'Asia/Jakarta'
           OPENWEATHER_API_KEY: ${{ secrets.OPENWEATHER_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHANNEL_ID: ${{ secrets.TELEGRAM_CHANNEL_ID }}
