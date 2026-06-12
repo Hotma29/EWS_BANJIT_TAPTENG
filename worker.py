@@ -124,7 +124,7 @@ def run_system():
             logika = "Fail-Safe BMKG: Hujan Instan Lebat/Sangat Lebat (>=10 mm/jam)"
             
         # 2. Cek Titik Buta Model (Boundary Patching) - PAS DI ANGKA 50 & 90
-        elif rain_rep == 50.0 and rh_rep == 90.0:
+        elif rain_rep >=50.0 and rh_rep == 90.0:
             status = "TINGGI"
             logika = "Fail-Safe BMKG: Menambal Boundary Model (Hujan Tepat 50 mm & RH 90%)"
             
@@ -134,7 +134,7 @@ def run_system():
             logika = "Fail-Safe BMKG: Hujan Instan Sedang (5 - 10 mm/jam)"
             
         # 4. Cek Titik Buta Model (Boundary Patching) - PAS DI ANGKA 20 & 85
-        elif rain_rep == 20.0 and rh_rep == 85.0:
+        elif rain_rep >= 20.0 and rh_rep == 85.0:
             status = "SEDANG"
             logika = "Fail-Safe BMKG: Menambal Boundary Model (Hujan Tepat 20 mm & RH 85%)"
             
