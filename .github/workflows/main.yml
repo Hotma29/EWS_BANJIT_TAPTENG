@@ -1,8 +1,7 @@
 name: Auto Weather Fetcher
 on:
-  schedule:
-    # Berjalan pada menit ke-3 setiap jam untuk menghindari antrean server
-    - cron: '3 * * * *'
+  repository_dispatch:
+    types: [trigger_cuaca]
   workflow_dispatch:
 
 jobs:
