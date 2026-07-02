@@ -69,7 +69,7 @@ def send_telegram_simulation(status, station, rain, rain3, rh, conf, logika, is_
             else:
                 pesan_himbauan = (
                     "*🚨 STATUS: BAHAYA (TINGGI) 🚨*\n"
-                    "PERINGATAN! Akumulasi curah hujan harian/3 hari atau probabilitas AI telah mencapai titik kritis. "
+                    "PERINGATAN! Akumulasi curah hujan ekstrem hingga mencapai titik kritis. "
                     "Kapasitas sungai berpotensi meluap secara masif. "
                     "Mohon segera lakukan langkah antisipasi dan evakuasi jika diperlukan!"
                 )
@@ -82,7 +82,6 @@ def send_telegram_simulation(status, station, rain, rain3, rh, conf, logika, is_
             f"🌊 *Hujan Akumulasi (3 Hari):* {rain3:.1f} mm\n"
             f"💧 *Kelembapan:* {rh}%\n"
             f"⚙️ *Mekanisme Trigger:* {logika}\n"
-            f"🎯 *Confidence AI (Internal):* {conf:.2f}%\n\n"
             f"📢 *Info:* {pesan_himbauan}\n\n"
             f"⚠️ _Pesan ini simulasi otomatis dari Dashboard EWS._"
         )
