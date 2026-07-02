@@ -15,24 +15,39 @@ CHANNEL_ID = os.getenv("TELEGRAM_CHANNEL_ID")
 
 st.set_page_config(page_title="EWS BANJIR TAPTENG", layout="wide", page_icon="🌊")
 
-# Custom CSS (Ditambahkan styling untuk stMetric agar kotak indikator lebih presisi dan tidak terlalu lebar)
+# Custom CSS
 st.markdown("""
     <style>
-    .main { background-color: #f5f7f9; }
+    /* Mengatur background utama */
+    .main { background-color: #0e1117; } /* Disesuaikan dengan dark mode */
+    
+    /* Mengatur kotak status (Rendah/Sedang/Tinggi) */
     .status-box {
         padding: 30px;
         border-radius: 15px;
         color: white;
         text-align: center;
         font-weight: bold;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
         margin-bottom: 25px;
     }
+    
+    /* Mengatur kotak indikator (Hujan, RH, dll) */
     div[data-testid="stMetric"] {
-        background-color: white;
-        padding: 10px 15px;
+        background-color: #ffffff; /* Kotak warna putih */
+        padding: 15px;
         border-radius: 10px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    
+    /* Memaksa warna judul indikator menjadi abu-abu gelap */
+    div[data-testid="stMetric"] label {
+        color: #4a4a4a !important; 
+    }
+    
+    /* Memaksa warna angka indikator menjadi hitam pekat */
+    div[data-testid="stMetric"] [data-testid="stMetricValue"] {
+        color: #000000 !important;
     }
     </style>
 """, unsafe_allow_html=True)
