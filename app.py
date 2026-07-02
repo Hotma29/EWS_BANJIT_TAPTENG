@@ -250,7 +250,7 @@ with tab2:
                 else:
                     status_sim = "RENDAH"
                     internal_conf = prob_rendah * 100
-                    logika = f"Analisis AI (Confidence RENDAH: {internal_conf:.1f}%)"
+                    logika = f"Analisis Random Forest (Confidence RENDAH)"
                     pesan_mitigasi = "✅ AMAN: Kondisi cuaca dan resapan air normal."
 
             st.markdown("---")
