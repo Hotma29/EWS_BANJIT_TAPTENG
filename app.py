@@ -171,7 +171,7 @@ with tab1:
         st.error(f"Koneksi Database Bermasalah: {e}")
 
 with tab2:
-    st.header("🧪 Simulasi Hybrid: Fail-Safe BMKG & Random Forest AI")
+    st.header("🧪 Mode Simulasi Hybrid ")
     col_a, col_b = st.columns(2)
     with col_a:
         st.markdown("### 📍 Input Hulu Tukka")
