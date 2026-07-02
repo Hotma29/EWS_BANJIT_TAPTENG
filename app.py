@@ -132,11 +132,11 @@ with st.sidebar:
             st.success("Koneksi API Berhasil!")
             st.markdown("### 📍 Hulu Tukka")
             st.write(f"- **Hujan (1 Jam):** {rt.get('rain',{}).get('1h', 0.0)} mm")
-            st.write(f"- **Kelembapan:** {rt['main']['humidity']}%")
+            st.write(f"- **Kelembapan Udara:** {rt['main']['humidity']}%")
             st.divider()
             st.markdown("### 📍 Hulu Sibabangun")
             st.write(f"- **Hujan (1 Jam):** {rs.get('rain',{}).get('1h', 0.0)} mm")
-            st.write(f"- **Kelembapan:** {rs['main']['humidity']}%")
+            st.write(f"- **Kelembapan Udara:** {rs['main']['humidity']}%")
             st.caption("ℹ️ Data simulasi API ini tidak disimpan ke database.")
 
 # --- 6. MAIN DASHBOARD ---
@@ -177,7 +177,7 @@ with tab1:
             c1, c2, c3, c4 = st.columns(4)
             with c1: st.metric("Hujan Harian", f"{latest['rain_tuk']:.1f} mm")
             with c2: st.metric("Hujan Instan", f"{latest['rain_tuk_latest']:.1f} mm")
-            with c3: st.metric("RH Terakhir", f"{latest['rh_tuk_latest']:.0f} %")
+            with c3: st.metric("RH (Kelembapan udara) Terakhir", f"{latest['rh_tuk_latest']:.0f} %")
             with c4: st.metric("Akumulasi (3 Hari)", f"{rain3_tuk:.1f} mm")
 
             st.subheader("📍 Pemantauan Hulu Sibabangun")
@@ -185,7 +185,7 @@ with tab1:
             c5, c6, c7, c8 = st.columns(4)
             with c5: st.metric("Hujan Harian", f"{latest['rain_sbbn']:.1f} mm")
             with c6: st.metric("Hujan Instan", f"{latest['rain_sbbn_latest']:.1f} mm")
-            with c7: st.metric("RH Terakhir", f"{latest['rh_sbbn_latest']:.0f} %")
+            with c7: st.metric("RH (Kelembapan Udara) Terakhir", f"{latest['rh_sbbn_latest']:.0f} %")
             with c8: st.metric("Akumulasi (3 Hari)", f"{rain3_sbbn:.1f} mm")
 
             st.markdown("---")
