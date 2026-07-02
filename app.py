@@ -82,6 +82,7 @@ def send_telegram_simulation(status, station, rain, rain3, rh, conf, logika, is_
             f"🌊 *Hujan Akumulasi (3 Hari):* {rain3:.1f} mm\n"
             f"💧 *Kelembapan:* {rh}%\n"
             f"⚙️ *Mekanisme Trigger:* {logika}\n"
+            
             f"📢 *Info:* {pesan_himbauan}\n\n"
             f"⚠️ _Pesan ini simulasi otomatis dari Dashboard EWS._"
         )
@@ -240,17 +241,17 @@ with tab2:
                 if prob_tinggi >= 0.30:
                     status_sim = "TINGGI"
                     internal_conf = prob_tinggi * 100
-                    logika = f"Analisis Random Forest (TINGGI)"
+                    logika = f"Analisis Random Forest"
                     pesan_mitigasi = "⚠️ PERINGATAN DARURAT: Akumulasi air di hulu mencapai titik kritis. Lakukan evakuasi!"
                 elif prob_sedang >= 0.40:
                     status_sim = "SEDANG"
                     internal_conf = prob_sedang * 100
-                    logika = f"Analisis Random Forest (SEDANG)"
+                    logika = f"Analisis Random Forest"
                     pesan_mitigasi = "👀 WASPADA: Kondisi cuaca memburuk & tanah jenuh. Pantau hulu sungai."
                 else:
                     status_sim = "RENDAH"
                     internal_conf = prob_rendah * 100
-                    logika = f"Analisis Random Forest (RENDAH)"
+                    logika = f"Analisis Random Forest"
                     pesan_mitigasi = "✅ AMAN: Kondisi cuaca dan resapan air normal."
 
             st.markdown("---")
