@@ -15,7 +15,7 @@ CHANNEL_ID = os.getenv("TELEGRAM_CHANNEL_ID")
 
 st.set_page_config(page_title="EWS BANJIR TAPTENG", layout="wide", page_icon="🌊")
 
-# Custom CSS
+# Custom CSS (Ditambahkan styling untuk stMetric agar kotak indikator lebih presisi dan tidak terlalu lebar)
 st.markdown("""
     <style>
     .main { background-color: #f5f7f9; }
@@ -27,6 +27,12 @@ st.markdown("""
         font-weight: bold;
         box-shadow: 0 4px 10px rgba(0,0,0,0.15);
         margin-bottom: 25px;
+    }
+    div[data-testid="stMetric"] {
+        background-color: white;
+        padding: 10px 15px;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     </style>
 """, unsafe_allow_html=True)
@@ -135,6 +141,11 @@ with tab1:
 
         if not df_db.empty:
             latest = df_db.iloc[0]
+            
+            # Kalkulasi Akumulasi 3 Hari Berdasarkan Data Database (Max 3 Baris Teratas)
+            rain3_tuk = df_db['rain_tuk'].head(3).sum()
+            rain3_sbbn = df_db['rain_sbbn'].head(3).sum()
+            
             status = latest['prediksi']
             bg_color = "#1b5e20" if status == "RENDAH" else "#e65100" if status == "SEDANG" else "#b71c1c"
             
@@ -147,16 +158,20 @@ with tab1:
             """, unsafe_allow_html=True)
 
             st.subheader("📍 Pemantauan Hulu Tukka")
-            c1, c2, c3 = st.columns(3)
-            with c1: st.metric("Hujan Total Hari Ini", f"{latest['rain_tuk']:.2f} mm")
-            with c2: st.metric("Hujan 1jam Terakhir", f"{latest['rain_tuk_latest']:.2f} mm")
-            with c3: st.metric("RH Terakhir", f"{latest['rh_tuk_latest']:.1f} %")
+            # Diubah menjadi 4 kolom
+            c1, c2, c3, c4 = st.columns(4)
+            with c1: st.metric("Hujan Harian", f"{latest['rain_tuk']:.1f} mm")
+            with c2: st.metric("Hujan Instan", f"{latest['rain_tuk_latest']:.1f} mm")
+            with c3: st.metric("RH Terakhir", f"{latest['rh_tuk_latest']:.0f} %")
+            with c4: st.metric("Akumulasi (3 Hari)", f"{rain3_tuk:.1f} mm")
 
             st.subheader("📍 Pemantauan Hulu Sibabangun")
-            c4, c5, c6 = st.columns(3)
-            with c4: st.metric("Hujan Total Hari Ini ", f"{latest['rain_sbbn']:.2f} mm")
-            with c5: st.metric("Hujan 1jam Terakhir ", f"{latest['rain_sbbn_latest']:.2f} mm")
-            with c6: st.metric("RH Terakhir ", f"{latest['rh_sbbn_latest']:.1f} %")
+            # Diubah menjadi 4 kolom
+            c5, c6, c7, c8 = st.columns(4)
+            with c5: st.metric("Hujan Harian", f"{latest['rain_sbbn']:.1f} mm")
+            with c6: st.metric("Hujan Instan", f"{latest['rain_sbbn_latest']:.1f} mm")
+            with c7: st.metric("RH Terakhir", f"{latest['rh_sbbn_latest']:.0f} %")
+            with c8: st.metric("Akumulasi (3 Hari)", f"{rain3_sbbn:.1f} mm")
 
             st.markdown("---")
             st.subheader("📊 Perbandingan Hujan Harian (7 Hari Terakhir)")
@@ -256,7 +271,7 @@ with tab2:
 
             st.markdown("---")
             st.info(f"🔍 **Analisis Spasial:** Parameter Representatif (REP) diambil dari **{rep_station}** karena ancaman akumulasinya lebih tinggi.")
-           
+            
             
             color_res = "#1b5e20" if status_sim == "RENDAH" else "#e65100" if status_sim == "SEDANG" else "#b71c1c"
             
