@@ -175,16 +175,16 @@ with tab1:
             st.subheader("📍 Pemantauan Hulu Tukka")
             # Diubah menjadi 4 kolom
             c1, c2, c3, c4 = st.columns(4)
-            with c1: st.metric("Hujan Harian", f"{latest['rain_tuk']:.1f} mm")
-            with c2: st.metric("Hujan Instan", f"{latest['rain_tuk_latest']:.1f} mm")
+            with c1: st.metric("Akumulasi Hujan Hari Ini", f"{latest['rain_tuk']:.1f} mm")
+            with c2: st.metric("Hujan 1 Jam Terakhir", f"{latest['rain_tuk_latest']:.1f} mm")
             with c3: st.metric("RH (Kelembapan udara) Terakhir", f"{latest['rh_tuk_latest']:.0f} %")
             with c4: st.metric("Akumulasi (3 Hari)", f"{rain3_tuk:.1f} mm")
 
             st.subheader("📍 Pemantauan Hulu Sibabangun")
             # Diubah menjadi 4 kolom
             c5, c6, c7, c8 = st.columns(4)
-            with c5: st.metric("Hujan Harian", f"{latest['rain_sbbn']:.1f} mm")
-            with c6: st.metric("Hujan Instan", f"{latest['rain_sbbn_latest']:.1f} mm")
+            with c5: st.metric("Akumulasi Hujan Hari Ini", f"{latest['rain_sbbn']:.1f} mm")
+            with c6: st.metric("Hujan 1 Jam Terakhir", f"{latest['rain_sbbn_latest']:.1f} mm")
             with c7: st.metric("RH (Kelembapan Udara) Terakhir", f"{latest['rh_sbbn_latest']:.0f} %")
             with c8: st.metric("Akumulasi (3 Hari)", f"{rain3_sbbn:.1f} mm")
 
