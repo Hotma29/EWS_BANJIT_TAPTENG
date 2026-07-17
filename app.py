@@ -234,9 +234,9 @@ with tab2:
             status_sim = ""
             logika = ""
             is_instan = False
-            internal_conf = 100.0 
+            internal_conf = 100.0 # Bawaan 100% jika murni diputus Rule-Based
             
-            # 2. LOGIKA KEPUTUSAN HYBRID
+            # 2. LOGIKA KEPUTUSAN HYBRID (Seperti di Worker)
             
             # Lapis 1: Cek Hujan Instan Sangat Lebat
             if s_instan1 >= 10.0 or s_instan2 >= 10.0:
@@ -252,32 +252,41 @@ with tab2:
                 is_instan = True
                 pesan_mitigasi = "👀 WASPADA: Hujan instan (1 jam terakhir) cukup lebat. Pantau terus pergerakan debit air."
             
-            # Lapis 3: EKSEKUSI MURNI RANDOM FOREST (MAJORITY VOTING)
+            # Lapis 3: Jika Hujan Instan aman, Biarkan AI Menganalisis Akumulasi Hariannya
             else:
                 features = ['RAIN', 'RAIN3', 'RH']
                 input_df = pd.DataFrame([[rain_rep, rain3_rep, rh_rep]], columns=features)
                 
-                # Menggunakan prediksi langsung tanpa probabilitas
-                prediksi_kelas = model.predict(input_df)[0]
+                probabilitas = model.predict_proba(input_df)[0]
                 
-                # Memastikan format label (agar aman jika output model berupa angka atau teks)
-                try:
-                    status_sim = le.inverse_transform([int(prediksi_kelas)])[0].upper()
-                except:
-                    status_sim = str(prediksi_kelas).upper()
+                idx_rendah = list(le.classes_).index('RENDAH')
+                idx_sedang = list(le.classes_).index('SEDANG')
+                idx_tinggi = list(le.classes_).index('TINGGI')
 
-                # Atur variabel output
-                logika = "Murni Keputusan Random Forest (.predict)"
-                
-                if status_sim == "TINGGI":
+                prob_rendah = probabilitas[idx_rendah]
+                prob_sedang = probabilitas[idx_sedang]
+                prob_tinggi = probabilitas[idx_tinggi]
+
+                # Threshold Tuning Rahasia
+                if prob_tinggi >= 0.10:
+                    status_sim = "TINGGI"
+                    internal_conf = prob_tinggi * 100
+                    logika = f"Analisis Random Forest"
                     pesan_mitigasi = "⚠️ PERINGATAN DARURAT: Akumulasi air di hulu mencapai titik kritis. Lakukan evakuasi!"
-                elif status_sim == "SEDANG":
+                elif prob_sedang >= 0.20:
+                    status_sim = "SEDANG"
+                    internal_conf = prob_sedang * 100
+                    logika = f"Analisis Random Forest"
                     pesan_mitigasi = "👀 WASPADA: Kondisi cuaca memburuk & tanah jenuh. Pantau hulu sungai."
                 else:
+                    status_sim = "RENDAH"
+                    internal_conf = prob_rendah * 100
+                    logika = f"Analisis Random Forest"
                     pesan_mitigasi = "✅ AMAN: Kondisi cuaca dan resapan air normal."
 
             st.markdown("---")
             st.info(f"🔍 **Analisis Spasial:** Parameter Representatif (REP) diambil dari **{rep_station}** karena ancaman akumulasinya lebih tinggi.")
+            
             
             color_res = "#1b5e20" if status_sim == "RENDAH" else "#e65100" if status_sim == "SEDANG" else "#b71c1c"
             
