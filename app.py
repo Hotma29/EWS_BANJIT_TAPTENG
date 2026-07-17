@@ -268,7 +268,7 @@ with tab2:
                 prob_tinggi = probabilitas[idx_tinggi]
 
                 # Threshold Tuning Rahasia
-                if prob_tinggi >= 0.20:
+                if prob_tinggi >= 0.10:
                     status_sim = "TINGGI"
                     internal_conf = prob_tinggi * 100
                     logika = f"Analisis Random Forest"
