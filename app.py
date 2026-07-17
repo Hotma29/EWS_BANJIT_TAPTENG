@@ -268,12 +268,12 @@ with tab2:
                 prob_tinggi = probabilitas[idx_tinggi]
 
                 # Threshold Tuning Rahasia
-                if prob_tinggi >= 0.10:
+                if prob_tinggi >= 0.20:
                     status_sim = "TINGGI"
                     internal_conf = prob_tinggi * 100
                     logika = f"Analisis Random Forest"
                     pesan_mitigasi = "⚠️ PERINGATAN DARURAT: Akumulasi air di hulu mencapai titik kritis. Lakukan evakuasi!"
-                elif prob_sedang >= 0.20:
+                elif prob_sedang >= 0.10:
                     status_sim = "SEDANG"
                     internal_conf = prob_sedang * 100
                     logika = f"Analisis Random Forest"
