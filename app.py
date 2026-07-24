@@ -215,7 +215,6 @@ with tab2:
     col_a, col_b = st.columns(2)
     with col_a:
         st.markdown("### 📍 Input Hulu Tukka")
-        t_chl = st.number_input("Hujan 1 Jam / Instan (mm)", 0.0, 100.0, 0.0, key="t_chl")
         t_ch = st.number_input("Hujan Hari Ini (mm)", 0.0, 300.0, 10.0, key="t_ch")
         t_ch3 = st.number_input("Akumulasi 3 Hari (mm)", 0.0, 500.0, 20.0, key="t_ch3")
         t_rh = st.slider("Kelembapan / RH (%)", 0, 100, 80, key="t_rh")
@@ -224,7 +223,6 @@ with tab2:
         
     with col_b:
         st.markdown("### 📍 Input Hulu Sibabangun")
-        s_chl = st.number_input("Hujan 1 Jam / Instan (mm)", 0.0, 100.0, 0.0, key="s_chl")
         s_ch = st.number_input("Hujan Hari Ini (mm) ", 0.0, 300.0, 5.0, key="s_ch")
         s_ch3 = st.number_input("Akumulasi 3 Hari (mm) ", 0.0, 500.0, 10.0, key="s_ch3")
         s_rh = st.slider("Kelembapan / RH (%) ", 0, 100, 75, key="s_rh")
