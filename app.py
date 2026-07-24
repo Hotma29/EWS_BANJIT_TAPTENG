@@ -226,11 +226,10 @@ with tab2:
             
             if skor_tukka >= skor_sibabangun:
                 rep_station = "Hulu Tukka"
-                # Fitur CH diambil dari Hujan 1 Jam (Instan) sesuai logika di worker.py
-                features_dict = {'CH': t_chl, 'CH3': t_ch3, 'RH': t_rh, 'T2M': t_t2m, 'WS10M': t_ws}
+                features_dict = {'CH': t_ch, 'CH3': t_ch3, 'RH': t_rh, 'T2M': t_t2m, 'WS10M': t_ws}
             else:
                 rep_station = "Hulu Sibabangun"
-                features_dict = {'CH': s_chl, 'CH3': s_ch3, 'RH': s_rh, 'T2M': s_t2m, 'WS10M': s_ws}
+                features_dict = {'CH': s_ch, 'CH3': s_ch3, 'RH': s_rh, 'T2M': s_t2m, 'WS10M': s_ws}
             
             # 2. LOGIKA KEPUTUSAN MURNI AI (Tanpa If-Else Cuaca)
             features_list = ['CH', 'CH3', 'RH', 'T2M', 'WS10M']
