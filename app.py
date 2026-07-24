@@ -154,31 +154,45 @@ with tab1:
 
             st.markdown("---")
             
-            col_t, col_s = st.columns(2)
+            # TRIK UX: Membagi layar jadi 3 kolom (Tukka 45%, Spacer 10%, Sibabangun 45%)
+            col_t, col_spacer, col_s = st.columns([4.5, 1, 4.5])
             
             with col_t:
-                st.subheader("📍 Pemantauan Hulu Tukka")
-                t1, t2, t3 = st.columns(3)
-                t1.metric("Hujan 1 Jam Terakhir", f"{latest['ch_tuk_latest']} mm")
-                t2.metric("Total Hujan Hari Ini", f"{latest['ch_tuk']} mm")
-                t3.metric("Akumulasi 3 Hari", f"{latest['ch3_tuk']} mm")
+                # Judul diberi warna biru agar secara visual terpisah
+                st.markdown("<h3 style='text-align: center; color: #4fc3f7;'>📍 Hulu Tukka</h3>", unsafe_allow_html=True)
+                st.write("") # Memberi sedikit spasi ekstra
                 
+                t1, t2, t3 = st.columns(3)
+                t1.metric("Hujan (1 Jam)", f"{latest['ch_tuk_latest']} mm")
+                t2.metric("Total Harian", f"{latest['ch_tuk']} mm")
+                t3.metric("Akumulasi (3 Hari)", f"{latest['ch3_tuk']} mm")
+                
+                st.write("") # Spasi antar baris metrik
                 t4, t5, t6 = st.columns(3)
                 t4.metric("Kelembapan (RH)", f"{latest['rh_tuk']} %")
-                t5.metric("Suhu Udara (T2M)", f"{latest['t2m_tuk']} °C")
+                t5.metric("Suhu Udara", f"{latest['t2m_tuk']} °C")
                 t6.metric("Angin (WS10M)", f"{latest['ws10m_tuk']} m/s")
 
+            with col_spacer:
+                # Kolom dibiarkan kosong murni sebagai tembok pemisah jarak
+                st.empty()
+
             with col_s:
-                st.subheader("📍 Pemantauan Hulu Sibabangun")
-                s1, s2, s3 = st.columns(3)
-                s1.metric("Hujan 1 Jam Terakhir", f"{latest['ch_sbbn_latest']} mm")
-                s2.metric("Total Hujan Hari Ini", f"{latest['ch_sbbn']} mm")
-                s3.metric("Akumulasi 3 Hari", f"{latest['ch3_sbbn']} mm")
+                # Judul diberi warna merah/oranye sebagai kontras
+                st.markdown("<h3 style='text-align: center; color: #ff8a65;'>📍 Hulu Sibabangun</h3>", unsafe_allow_html=True)
+                st.write("") 
                 
+                s1, s2, s3 = st.columns(3)
+                s1.metric("Hujan (1 Jam)", f"{latest['ch_sbbn_latest']} mm")
+                s2.metric("Total Harian", f"{latest['ch_sbbn']} mm")
+                s3.metric("Akumulasi (3 Hari)", f"{latest['ch3_sbbn']} mm")
+                
+                st.write("") 
                 s4, s5, s6 = st.columns(3)
                 s4.metric("Kelembapan (RH)", f"{latest['rh_sbbn']} %")
-                s5.metric("Suhu Udara (T2M)", f"{latest['t2m_sbbn']} °C")
+                s5.metric("Suhu Udara", f"{latest['t2m_sbbn']} °C")
                 s6.metric("Angin (WS10M)", f"{latest['ws10m_sbbn']} m/s")
+
 
             st.markdown("---")
             st.subheader("📊 Perbandingan Hujan Harian (7 Hari Terakhir)")
