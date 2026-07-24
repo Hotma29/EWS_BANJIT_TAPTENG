@@ -136,6 +136,7 @@ with tab1:
         """
         df_db = pd.read_sql_query(query, conn)
         conn.close()
+        df_db['created_at'] = pd.to_datetime(df_db['created_at']).dt.strftime('%d-%m-%Y %H:%M:%S')
 
         if not df_db.empty:
             latest = df_db.iloc[0]
