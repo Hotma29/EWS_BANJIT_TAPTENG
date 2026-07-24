@@ -57,7 +57,7 @@ def run_system():
     # Penentuan Waktu (WIB)
     wib_now = datetime.utcnow() + timedelta(hours=7)
     tgl = wib_now.strftime('%Y-%m-%d')
-    waktu_lengkap = wib_now.strftime('%Y-%m-%d %H:%M:%S+07:00')
+    waktu_lengkap = wib_now.strftime('%Y-%m-%d %H:%M:%S')
     
     print(f"\n--- SIKLUS EKSEKUSI: {waktu_lengkap} ---")
     
