@@ -51,7 +51,7 @@ st.markdown("""
 @st.cache_resource
 def load_smart_model():
     # Load model Random Forest Murni dengan 5 Fitur
-    model = joblib.load('model.pkl')
+    model = joblib.load('random_forest_model.pkl')
     le = joblib.load('label_encoder.pkl')
     return model, le
 
