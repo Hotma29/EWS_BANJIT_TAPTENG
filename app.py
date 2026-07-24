@@ -122,8 +122,9 @@ with st.sidebar:
             st.caption("ℹ️ Data simulasi API ini tidak disimpan ke database.")
 
 # --- 6. MAIN DASHBOARD ---
-st.title("🌊 Sistem Peringatan Dini Potensi Banjir Bandang (AI Murni)")
-tab1, tab2 = st.tabs(["📊 Monitoring Real-Time", "🧪 Laboratorium AI (Simulasi)"])
+st.title("🌊 🌧️ Dashboard Monitoring Potensi Banjir
+Kabupaten Tapanuli Tengah")
+tab1, tab2 = st.tabs(["📊 Monitoring Real-Time", "🧪 Mode Simulasi"])
 
 with tab1:
     try:
@@ -209,7 +210,7 @@ with tab1:
         st.error(f"Koneksi Database Bermasalah: {e}")
 
 with tab2:
-    st.header("🧪 Laboratorium AI Murni (Simulasi 5 Parameter)")
+    st.header("🧪 Mode Simulasi(Simulasi 5 Parameter)")
     st.write("Masukkan angka secara manual untuk melihat bagaimana model Random Forest mengklasifikasikan status banjir.")
     
     col_a, col_b = st.columns(2)
