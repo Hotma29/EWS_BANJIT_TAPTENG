@@ -26,7 +26,8 @@ def fetch_open_meteo(lat, lon, retries=3, delay=5):
         "longitude": lon,
         "current": ["precipitation", "relative_humidity_2m", "temperature_2m", "wind_speed_10m"],
         "daily": ["precipitation_sum"],
-        "timezone": "Asia/Jakarta"
+        "timezone": "Asia/Jakarta",
+        "wind_speed_unit": "ms"
     }
     
     for i in range(retries):
