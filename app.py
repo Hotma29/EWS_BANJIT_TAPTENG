@@ -122,8 +122,7 @@ with st.sidebar:
             st.caption("ℹ️ Data simulasi API ini tidak disimpan ke database.")
 
 # --- 6. MAIN DASHBOARD ---
-st.title("🌊Dashboard Monitoring Potensi Banjir
-Kabupaten Tapanuli Tengah")
+st.title("🌊Dashboard Monitoring Potensi Banjir Kabupaten Tapanuli Tengah")
 tab1, tab2 = st.tabs(["📊 Monitoring Real-Time", "🧪 Mode Simulasi"])
 
 with tab1:
