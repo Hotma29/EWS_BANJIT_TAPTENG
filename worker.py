@@ -120,10 +120,10 @@ def run_system():
         skor_sibabangun = max(ch_s, ch3_sbbn)
 
         if skor_tukka >= skor_sibabangun:
-            rep_features = {'CH': chl_t, 'CH3': ch3_tuk, 'RH': rh_t, 'T2M': t2m_t, 'WS10M': ws_t}
+            rep_features = {'CH': ch_t, 'CH3': ch3_tuk, 'RH': rh_t, 'T2M': t2m_t, 'WS10M': ws_t}
             lokasi_nama = 'Tukka (Hutanabolon)'
         else:
-            rep_features = {'CH': chl_s, 'CH3': ch3_sbbn, 'RH': rh_s, 'T2M': t2m_s, 'WS10M': ws_s}
+            rep_features = {'CH': ch_s, 'CH3': ch3_sbbn, 'RH': rh_s, 'T2M': t2m_s, 'WS10M': ws_s}
             lokasi_nama = 'Sibabangun (Muara)'
 
         # [ALUR 4 & 5] Load model.pkl & Random Forest Classification (PURE PREDICT)
