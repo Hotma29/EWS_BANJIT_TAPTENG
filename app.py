@@ -63,8 +63,8 @@ def send_telegram_simulation(status, station, chl_rep, features_dict):
        elif status == "SEDANG":
                 pesan_himbauan = "WASPADA: Pantau terus kondisi cuaca secara berkala!"
 
-        waktu_simulasi = datetime.utcnow() + timedelta(hours=7)
-        waktu_lengkap = waktu_simulasi.strftime('%Y-%m-%d %H:%M:%S')
+       waktu_simulasi = datetime.utcnow() + timedelta(hours=7)
+       waktu_lengkap = waktu_simulasi.strftime('%Y-%m-%d %H:%M:%S')
 
         text = (
             "*INFORMASI POTENSI BANJIR - KAB. TAPANULI TENGAH*\n"
