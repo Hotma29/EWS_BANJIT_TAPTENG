@@ -58,10 +58,10 @@ def load_smart_model():
 # --- 3. FUNGSI KIRIM TELEGRAM (Simulasi Profesional) ---
 def send_telegram_simulation(status, station, chl_rep, features_dict):
     try:
-        if status == "TINGGI":
-            pesan_himbauan = "PERINGATAN DARURAT: Pola hidrometeorologi ekstrem terdeteksi. Potensi luapan sungai sangat tinggi. Segera lakukan evakuasi preventif dan siagakan tim mitigasi bencana."
-        elif status == "SEDANG":
-            pesan_himbauan = "WASPADA: Indikator cuaca menunjukkan potensi peningkatan debit air. Tingkatkan frekuensi pemantauan visual pada hulu dan bantaran sungai."
+       if status == "TINGGI":
+                pesan_himbauan = "BAHAYA: Mohon segera lakukan langkah antisipasi dan evakuasi jika diperlukan!"
+            elif status == "SEDANG":
+                pesan_himbauan = "WASPADA: Pantau terus kondisi cuaca secara berkala!"
 
         waktu_simulasi = datetime.utcnow() + timedelta(hours=7)
         waktu_lengkap = waktu_simulasi.strftime('%Y-%m-%d %H:%M:%S')
