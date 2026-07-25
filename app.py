@@ -58,13 +58,13 @@ def load_smart_model():
 # --- 3. FUNGSI KIRIM TELEGRAM (Simulasi Profesional) ---
 def send_telegram_simulation(status, station, chl_rep, features_dict):
     try:
-       if status == "TINGGI":
-                pesan_himbauan = "BAHAYA: Mohon segera lakukan langkah antisipasi dan evakuasi jika diperlukan!"
-       elif status == "SEDANG":
-                pesan_himbauan = "WASPADA: Pantau terus kondisi cuaca secara berkala!"
+        if status == "TINGGI":
+            pesan_himbauan = "BAHAYA: Mohon segera lakukan langkah antisipasi dan evakuasi jika diperlukan!"
+        elif status == "SEDANG":
+            pesan_himbauan = "WASPADA: Pantau terus kondisi cuaca secara berkala!"
 
-       waktu_simulasi = datetime.utcnow() + timedelta(hours=7)
-       waktu_lengkap = waktu_simulasi.strftime('%Y-%m-%d %H:%M:%S')
+        waktu_simulasi = datetime.utcnow() + timedelta(hours=7)
+        waktu_lengkap = waktu_simulasi.strftime('%Y-%m-%d %H:%M:%S')
 
         text = (
             "*INFORMASI POTENSI BANJIR - KAB. TAPANULI TENGAH*\n"
