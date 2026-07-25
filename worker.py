@@ -116,17 +116,18 @@ def run_system():
         ch3_tuk = sum(r[0] for r in rows if r[0] is not None)
         ch3_sbbn = sum(r[1] for r in rows if r[1] is not None)
 
-        # Penentuan Lokasi Representatif (Berdasarkan Max CH Harian dan CH3)
+       # Penentuan Lokasi Representatif
         skor_tukka = max(ch_t, ch3_tuk)
         skor_sibabangun = max(ch_s, ch3_sbbn)
 
         if skor_tukka >= skor_sibabangun:
             rep_features = {'CH': ch_t, 'CH3': ch3_tuk, 'RH': rh_t, 'T2M': t2m_t, 'WS10M': ws_t}
-            lokasi_nama = 'Tukka (Hutanabolon)'
+            chl_rep = chl_t  # <--- Simpan nilai 1 jam untuk Tukka
+            lokasi_nama = 'Hulu Tukka'
         else:
             rep_features = {'CH': ch_s, 'CH3': ch3_sbbn, 'RH': rh_s, 'T2M': t2m_s, 'WS10M': ws_s}
-            lokasi_nama = 'Sibabangun (Muara)'
-
+            chl_rep = chl_s  # <--- Simpan nilai 1 jam untuk Sibabangun
+            lokasi_nama = 'Hulu Sibabangun'
         # [ALUR 4 & 5] Load model.pkl & Random Forest Classification (PURE PREDICT)
         print("Menjalankan inferensi AI Random Forest...")
         try:
@@ -155,22 +156,29 @@ def run_system():
         
         print(f"Hasil: {status} | Acuan: {lokasi_nama} | {logika}")
 
-        # [ALUR 7] Telegram Bot Notifikasi
+       # [ALUR 7] Telegram Bot Notifikasi
         if status in ["SEDANG", "TINGGI"]:
-            emoji = "🚨" if status == "TINGGI" else "⚠️"
             
-            msg = (f"{emoji} *KLASIFIKASI BANJIR TAPTENG (RF CLOUD)* {emoji}\n\n"
-                   f"📍 *Titik Acuan:* {lokasi_nama}\n"
-                   f"🌧️ *Hujan (1 Jam):* {rep_features['CH']} mm\n"
-                   f"📊 *Hujan Akumulasi (CH3):* {rep_features['CH3']:.1f} mm\n"
-                   f"💧 *Kelembapan:* {rep_features['RH']}%\n"
-                   f"🌡️ *Suhu Udara:* {rep_features['T2M']}°C\n"
-                   f"💨 *Kecepatan Angin:* {rep_features['WS10M']} m/s\n\n"
-                   f"🤖 *Hasil Klasifikasi Model:* {status}")
+            # Format pesan resmi dan profesional tanpa emoji
+            msg = (
+                "*INFORMASI POTENSI BANJIR - KAB. TAPANULI TENGAH*\n"
+                "--------------------------------------------------\n\n"
+                f"*Status Prediksi     :* {status}\n"
+                f"*Titik Pemantauan :* Hulu {lokasi_nama}\n\n"
+                "*Data Hidrometeorologi:*\n"
+                f"- Curah Hujan (1 Jam) : {rep_features['chl_rep']} mm\n"
+                f"- Curah Hujan (1 Jam) : {rep_features['CH']} mm\n"
+                f"- Akumulasi Hujan (CH3) : {rep_features['CH3']:.1f} mm\n"
+                f"- Kelembapan Udara (RH) : {rep_features['RH']} %\n"
+                f"- Suhu Udara (T2M)      : {rep_features['T2M']} °C\n"
+                f"- Kecepatan Angin       : {rep_features['WS10M']} m/s\n\n"
+                f"*Waktu Pembaruan:* {waktu_lengkap} WIB\n"
+                "--------------------------------------------------\n"
+                "_Pesan ini dihasilkan secara otomatis oleh sistem._"
+            )
             
             requests.get(f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage", 
                          params={"chat_id": CHANNEL_ID, "text": msg, "parse_mode": "Markdown"})
-
     except Exception as e:
         print(f"Error Operasional: {e}")
         if conn: conn.rollback()
