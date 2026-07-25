@@ -6,6 +6,7 @@ import requests
 import joblib
 import numpy as np
 import pandas as pd
+from datetime import datetime, timedelta
 
 # --- 1. KONFIGURASI ---
 DB_URL = os.getenv("SUPABASE_DB_URL")
@@ -14,7 +15,7 @@ CHANNEL_ID = os.getenv("TELEGRAM_CHANNEL_ID")
 
 st.set_page_config(page_title="EWS BANJIR TAPTENG", layout="wide", page_icon="🌊")
 
-# Custom CSS untuk UI yang lebih profesional
+# Custom CSS
 st.markdown("""
     <style>
     .main { background-color: #0e1117; }
@@ -50,35 +51,40 @@ st.markdown("""
 # --- 2. FUNGSI LOAD MODEL AI ---
 @st.cache_resource
 def load_smart_model():
-    # Load model Random Forest Murni dengan 5 Fitur
     model = joblib.load('random_forest_model.pkl')
     le = joblib.load('label_encoder.pkl')
     return model, le
 
-# --- 3. FUNGSI KIRIM TELEGRAM (Murni AI) ---
-def send_telegram_simulation(status, station, features_dict):
+# --- 3. FUNGSI KIRIM TELEGRAM (Simulasi Profesional) ---
+def send_telegram_simulation(status, station, chl_rep, features_dict):
     try:
-        emoji = "🚨" if status == "TINGGI" else "⚠️"
-        
         if status == "TINGGI":
-            pesan_himbauan = "PERINGATAN DARURAT: Klasifikasi AI menunjukkan pola cuaca ekstrem. Potensi luapan sungai sangat tinggi. Segera siagakan tim mitigasi!"
+            pesan_himbauan = "PERINGATAN DARURAT: Pola hidrometeorologi ekstrem terdeteksi. Potensi luapan sungai sangat tinggi. Segera lakukan evakuasi preventif dan siagakan tim mitigasi bencana."
         elif status == "SEDANG":
-            pesan_himbauan = "WASPADA: Klasifikasi AI menunjukkan pola cuaca memburuk. Pantau pergerakan debit air secara berkala."
+            pesan_himbauan = "WASPADA: Indikator cuaca menunjukkan potensi peningkatan debit air. Tingkatkan frekuensi pemantauan visual pada hulu dan bantaran sungai."
         else:
-            pesan_himbauan = "AMAN: Pola cuaca normal menurut klasifikasi AI."
+            pesan_himbauan = "AMAN: Kondisi hidrometeorologi dalam batas normal."
+
+        waktu_simulasi = datetime.utcnow() + timedelta(hours=7)
+        waktu_lengkap = waktu_simulasi.strftime('%Y-%m-%d %H:%M:%S')
 
         text = (
-            f"🧪 *[MODE SIMULASI LABORATORIUM]*\n"
-            f"{emoji} *EWS BANJIR TAPTENG: {status}* {emoji}\n\n"
-            f"📍 *Titik Pantau Acuan:* {station}\n"
-            f"🌧️ *Hujan (1 Jam):* {features_dict['CH']} mm\n"
-            f"🌊 *Akumulasi (3 Hari):* {features_dict['CH3']} mm\n"
-            f"💧 *Kelembapan Udara:* {features_dict['RH']}%\n"
-            f"🌡️ *Suhu Udara:* {features_dict['T2M']}°C\n"
-            f"💨 *Kecepatan Angin:* {features_dict['WS10M']} m/s\n\n"
-            f"🤖 *Keputusan:* Murni Prediksi Random Forest\n"
-            f"📢 *Info:* {pesan_himbauan}\n\n"
-            f"⚠️ _Pesan ini simulasi otomatis dari Dashboard EWS._"
+            "*INFORMASI POTENSI BANJIR - KAB. TAPANULI TENGAH*\n"
+            "[MODE SIMULASI LABORATORIUM]\n"
+            "--------------------------------------------------\n\n"
+            f"*Status Prediksi  :* {status}\n"
+            f"*Titik Pantauan   :* {station}\n\n"
+            "*Data Hidrometeorologi:*\n"
+            f"- Curah Hujan (1 Jam)   : {chl_rep} mm\n"
+            f"- Curah Hujan (Harian)  : {features_dict['CH']} mm\n"
+            f"- Akumulasi Hujan (CH3) : {features_dict['CH3']} mm\n"
+            f"- Kelembapan Udara (RH) : {features_dict['RH']} %\n"
+            f"- Suhu Udara (T2M)      : {features_dict['T2M']} °C\n"
+            f"- Kecepatan Angin       : {features_dict['WS10M']} m/s\n\n"
+            f"*Instruksi Mitigasi:*\n{pesan_himbauan}\n\n"
+            f"*Waktu Simulasi:* {waktu_lengkap} WIB\n"
+            "--------------------------------------------------\n"
+            "_Pesan ini dikirim melalui Dashboard Simulasi EWS._"
         )
         url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
         params = {"chat_id": CHANNEL_ID, "text": text, "parse_mode": "Markdown"}
@@ -122,7 +128,7 @@ with st.sidebar:
             st.caption("ℹ️ Data simulasi API ini tidak disimpan ke database.")
 
 # --- 6. MAIN DASHBOARD ---
-st.title("🌊Dashboard Monitoring Potensi Banjir Kabupaten Tapanuli Tengah")
+st.title("🌊 Dashboard Monitoring Potensi Banjir Kabupaten Tapanuli Tengah")
 tab1, tab2 = st.tabs(["📊 Monitoring Real-Time", "🧪 Mode Simulasi"])
 
 with tab1:
@@ -154,31 +160,27 @@ with tab1:
 
             st.markdown("---")
             
-            # TRIK UX: Membagi layar jadi 3 kolom (Tukka 45%, Spacer 10%, Sibabangun 45%)
             col_t, col_spacer, col_s = st.columns([4.5, 1, 4.5])
             
             with col_t:
-                # Judul diberi warna biru agar secara visual terpisah
                 st.markdown("<h3 style='text-align: center; color: #4fc3f7;'>📍 Hulu Tukka</h3>", unsafe_allow_html=True)
-                st.write("") # Memberi sedikit spasi ekstra
+                st.write("") 
                 
                 t1, t2, t3 = st.columns(3)
                 t1.metric("Hujan (1 Jam)", f"{latest['ch_tuk_latest']} mm")
                 t2.metric("Total Harian", f"{latest['ch_tuk']} mm")
                 t3.metric("Akumulasi (3 Hari)", f"{latest['ch3_tuk']} mm")
                 
-                st.write("") # Spasi antar baris metrik
+                st.write("") 
                 t4, t5, t6 = st.columns(3)
                 t4.metric("Kelembapan (RH)", f"{latest['rh_tuk']} %")
                 t5.metric("Suhu Udara", f"{latest['t2m_tuk']} °C")
                 t6.metric("Angin (WS10M)", f"{latest['ws10m_tuk']} m/s")
 
             with col_spacer:
-                # Kolom dibiarkan kosong murni sebagai tembok pemisah jarak
                 st.empty()
 
             with col_s:
-                # Judul diberi warna merah/oranye sebagai kontras
                 st.markdown("<h3 style='text-align: center; color: #ff8a65;'>📍 Hulu Sibabangun</h3>", unsafe_allow_html=True)
                 st.write("") 
                 
@@ -192,7 +194,6 @@ with tab1:
                 s4.metric("Kelembapan (RH)", f"{latest['rh_sbbn']} %")
                 s5.metric("Suhu Udara", f"{latest['t2m_sbbn']} °C")
                 s6.metric("Angin (WS10M)", f"{latest['ws10m_sbbn']} m/s")
-
 
             st.markdown("---")
             st.subheader("📊 Perbandingan Hujan Harian (7 Hari Terakhir)")
@@ -209,42 +210,46 @@ with tab1:
         st.error(f"Koneksi Database Bermasalah: {e}")
 
 with tab2:
-    st.header("🧪 Mode Simulasi(Simulasi 5 Parameter)")
+    st.header("🧪 Mode Simulasi (Simulasi 5 Parameter)")
     st.write("Masukkan angka secara manual untuk melihat bagaimana model Random Forest mengklasifikasikan status banjir.")
     
     col_a, col_b = st.columns(2)
     with col_a:
         st.markdown("### 📍 Input Hulu Tukka")
-        t_ch = st.number_input("Hujan Hari Ini (mm)", 0.0, 300.0, 10.0, key="t_ch")
-        t_ch3 = st.number_input("Akumulasi 3 Hari (mm)", 0.0, 500.0, 20.0, key="t_ch3")
-        t_rh = st.slider("Kelembapan / RH (%)", 0, 100, 80, key="t_rh")
-        t_t2m = st.number_input("Suhu Udara / T2M (°C)", 10.0, 45.0, 26.0, key="t_t2m")
-        t_ws = st.number_input("Kecepatan Angin / WS10M (m/s)", 0.0, 30.0, 1.5, key="t_ws")
+        ch_tuk_latest = st.number_input("Hujan 1 Jam (mm)", 0.0, 100.0, 0.0, key="sim_chl_tuk")
+        ch_tuk = st.number_input("Hujan Hari Ini (mm)", 0.0, 300.0, 10.0, key="sim_ch_tuk")
+        ch3_tuk = st.number_input("Akumulasi 3 Hari (mm)", 0.0, 500.0, 20.0, key="sim_ch3_tuk")
+        rh_tuk = st.slider("Kelembapan / RH (%)", 0, 100, 80, key="sim_rh_tuk")
+        t2m_tuk = st.number_input("Suhu Udara / T2M (°C)", 10.0, 45.0, 26.0, key="sim_t2m_tuk")
+        ws10m_tuk = st.number_input("Kecepatan Angin / WS10M (m/s)", 0.0, 30.0, 1.5, key="sim_ws_tuk")
         
     with col_b:
         st.markdown("### 📍 Input Hulu Sibabangun")
-        s_ch = st.number_input("Hujan Hari Ini (mm) ", 0.0, 300.0, 5.0, key="s_ch")
-        s_ch3 = st.number_input("Akumulasi 3 Hari (mm) ", 0.0, 500.0, 10.0, key="s_ch3")
-        s_rh = st.slider("Kelembapan / RH (%) ", 0, 100, 75, key="s_rh")
-        s_t2m = st.number_input("Suhu Udara / T2M (°C) ", 10.0, 45.0, 28.0, key="s_t2m")
-        s_ws = st.number_input("Kecepatan Angin / WS10M (m/s) ", 0.0, 30.0, 2.0, key="s_ws")
+        ch_sbbn_latest = st.number_input("Hujan 1 Jam (mm) ", 0.0, 100.0, 0.0, key="sim_chl_sbbn")
+        ch_sbbn = st.number_input("Hujan Hari Ini (mm) ", 0.0, 300.0, 5.0, key="sim_ch_sbbn")
+        ch3_sbbn = st.number_input("Akumulasi 3 Hari (mm) ", 0.0, 500.0, 10.0, key="sim_ch3_sbbn")
+        rh_sbbn = st.slider("Kelembapan / RH (%) ", 0, 100, 75, key="sim_rh_sbbn")
+        t2m_sbbn = st.number_input("Suhu Udara / T2M (°C) ", 10.0, 45.0, 28.0, key="sim_t2m_sbbn")
+        ws10m_sbbn = st.number_input("Kecepatan Angin / WS10M (m/s) ", 0.0, 30.0, 2.0, key="sim_ws_sbbn")
 
     if st.button("🚀 Jalankan Inferensi AI", type="primary", use_container_width=True):
         try:
             model, le = load_smart_model()
             
-            # 1. CARI LOKASI TERPARAH (REPRESENTATIF) Murni berdasarkan Hujan (Max Harian vs CH3)
-            skor_tukka = max(t_ch, t_ch3)
-            skor_sibabangun = max(s_ch, s_ch3)
+            # 1. CARI LOKASI TERPARAH (REPRESENTATIF)
+            skor_tukka = max(ch_tuk, ch3_tuk)
+            skor_sibabangun = max(ch_sbbn, ch3_sbbn)
             
             if skor_tukka >= skor_sibabangun:
                 rep_station = "Hulu Tukka"
-                features_dict = {'CH': t_ch, 'CH3': t_ch3, 'RH': t_rh, 'T2M': t_t2m, 'WS10M': t_ws}
+                chl_rep = ch_tuk_latest
+                features_dict = {'CH': ch_tuk, 'CH3': ch3_tuk, 'RH': rh_tuk, 'T2M': t2m_tuk, 'WS10M': ws10m_tuk}
             else:
                 rep_station = "Hulu Sibabangun"
-                features_dict = {'CH': s_ch, 'CH3': s_ch3, 'RH': s_rh, 'T2M': s_t2m, 'WS10M': s_ws}
+                chl_rep = ch_sbbn_latest
+                features_dict = {'CH': ch_sbbn, 'CH3': ch3_sbbn, 'RH': rh_sbbn, 'T2M': t2m_sbbn, 'WS10M': ws10m_sbbn}
             
-            # 2. LOGIKA KEPUTUSAN MURNI AI (Tanpa If-Else Cuaca)
+            # 2. LOGIKA KEPUTUSAN MURNI AI
             features_list = ['CH', 'CH3', 'RH', 'T2M', 'WS10M']
             input_df = pd.DataFrame([features_dict], columns=features_list)
             
@@ -252,11 +257,11 @@ with tab2:
             status_sim = le.inverse_transform([int(prediksi_kelas)])[0].upper()
             
             if status_sim == "TINGGI":
-                pesan_mitigasi = "⚠️ BAHAYA:  Model AI mengklasifikasikan kondisi meteorologii bahaya tinggi."
+                pesan_mitigasi = "⚠️ PERINGATAN DARURAT: Bahaya banjir tinggi. Segera evakuasi!"
             elif status_sim == "SEDANG":
-                pesan_mitigasi = "👀 WASPADA: Model AI mendeteksi cuaca yang mengarah ke potensi meluapnya air."
+                pesan_mitigasi = "👀 WASPADA: Pantau pergerakan debit air secara berkala."
             else:
-                pesan_mitigasi = "✅ AMAN: Model AI mengklasifikasikan kondisi meteorologi dalam batas normal."
+                pesan_mitigasi = "✅ AMAN: Kondisi cuaca dalam batas normal."
 
             st.markdown("---")
             st.info(f"🔍 **Analisis Spasial:** Parameter Representatif (REP) diekstrak dari **{rep_station}** karena intensitas akumulasi hujannya lebih parah.")
@@ -272,8 +277,8 @@ with tab2:
 
             # --- NOTIFIKASI TELEGRAM ---
             if status_sim in ["SEDANG", "TINGGI"]:
-                send_telegram_simulation(status_sim, rep_station, features_dict)
+                send_telegram_simulation(status_sim, rep_station, chl_rep, features_dict)
                 st.toast("🚨 Notifikasi Bahaya Simulasi berhasil dikirim ke Telegram!", icon="🚨")
 
         except Exception as e:
-            st.error(f"Gagal memproses analisis AI: {e}")
+            st.error(f"Gagal memproses analisis: {e}")
