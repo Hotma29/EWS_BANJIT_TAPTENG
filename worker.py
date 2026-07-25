@@ -27,7 +27,7 @@ def fetch_open_meteo(lat, lon, retries=3, delay=5):
         "current": ["precipitation", "relative_humidity_2m", "temperature_2m", "wind_speed_10m"],
         "daily": ["precipitation_sum"],
         "timezone": "Asia/Jakarta",
-        "wind_speed_unit": "ms"
+        "wind_speed_unit": "ms"  # Konsistensi dengan naskah skripsi
     }
     
     for i in range(retries):
@@ -55,17 +55,17 @@ def fetch_open_meteo(lat, lon, retries=3, delay=5):
 
 # --- 3. SISTEM UTAMA ---
 def run_system():
-    # Penentuan Waktu (WIB)
+    # Penentuan Waktu (WIB) murni
     wib_now = datetime.utcnow() + timedelta(hours=7)
     tgl = wib_now.strftime('%Y-%m-%d')
     waktu_lengkap = wib_now.strftime('%Y-%m-%d %H:%M:%S')
     
     print(f"\n--- SIKLUS EKSEKUSI: {waktu_lengkap} ---")
     
-    # [ALUR 1] Open-Meteo API
+    # [ALUR 1] Open-Meteo API (Menggunakan variabel konsisten Supabase)
     print("Menarik data dari Open-Meteo API...")
-    ch_t, chl_t, rh_t, t2m_t, ws_t = fetch_open_meteo(LOCS["Tukka"]["lat"], LOCS["Tukka"]["lon"])
-    ch_s, chl_s, rh_s, t2m_s, ws_s = fetch_open_meteo(LOCS["Sibabangun"]["lat"], LOCS["Sibabangun"]["lon"])
+    ch_tuk, ch_tuk_latest, rh_tuk, t2m_tuk, ws10m_tuk = fetch_open_meteo(LOCS["Tukka"]["lat"], LOCS["Tukka"]["lon"])
+    ch_sbbn, ch_sbbn_latest, rh_sbbn, t2m_sbbn, ws10m_sbbn = fetch_open_meteo(LOCS["Sibabangun"]["lat"], LOCS["Sibabangun"]["lon"])
     
     # Koneksi Database
     conn = None
@@ -104,31 +104,32 @@ def run_system():
                 ws10m_sbbn = EXCLUDED.ws10m_sbbn,
                 entry_count = histori_harian.entry_count + 1,
                 created_at = EXCLUDED.created_at;
-        """, (tgl, waktu_lengkap, ch_t, chl_t, rh_t, t2m_t, ws_t, ch_s, chl_s, rh_s, t2m_s, ws_s))
+        """, (tgl, waktu_lengkap, ch_tuk, ch_tuk_latest, rh_tuk, t2m_tuk, ws10m_tuk, 
+              ch_sbbn, ch_sbbn_latest, rh_sbbn, t2m_sbbn, ws10m_sbbn))
         conn.commit()
 
-        # [ALUR 3] Hitung CH3 (Akumulasi Hujan 3 Hari) via SELECT
+        # [ALUR 3] Hitung CH3 via SELECT
         print("Menghitung akumulasi CH3 dari database...")
         cur.execute("SELECT ch_tuk, ch_sbbn FROM histori_harian ORDER BY tanggal DESC LIMIT 3")
         rows = cur.fetchall()
         
-        # Menjumlahkan riwayat 3 hari (mengabaikan nilai None jika ada)
         ch3_tuk = sum(r[0] for r in rows if r[0] is not None)
         ch3_sbbn = sum(r[1] for r in rows if r[1] is not None)
 
-       # Penentuan Lokasi Representatif
-        skor_tukka = max(ch_t, ch3_tuk)
-        skor_sibabangun = max(ch_s, ch3_sbbn)
+        # Penentuan Lokasi Representatif
+        skor_tukka = max(ch_tuk, ch3_tuk)
+        skor_sibabangun = max(ch_sbbn, ch3_sbbn)
 
         if skor_tukka >= skor_sibabangun:
-            rep_features = {'CH': ch_t, 'CH3': ch3_tuk, 'RH': rh_t, 'T2M': t2m_t, 'WS10M': ws_t}
-            chl_rep = chl_t  # <--- Simpan nilai 1 jam untuk Tukka
-            lokasi_nama = 'Hulu Tukka'
+            rep_features = {'CH': ch_tuk, 'CH3': ch3_tuk, 'RH': rh_tuk, 'T2M': t2m_tuk, 'WS10M': ws10m_tuk}
+            chl_rep = ch_tuk_latest
+            lokasi_nama = 'Tukka (Hutanabolon)'
         else:
-            rep_features = {'CH': ch_s, 'CH3': ch3_sbbn, 'RH': rh_s, 'T2M': t2m_s, 'WS10M': ws_s}
-            chl_rep = chl_s  # <--- Simpan nilai 1 jam untuk Sibabangun
-            lokasi_nama = 'Hulu Sibabangun'
-        # [ALUR 4 & 5] Load model.pkl & Random Forest Classification (PURE PREDICT)
+            rep_features = {'CH': ch_sbbn, 'CH3': ch3_sbbn, 'RH': rh_sbbn, 'T2M': t2m_sbbn, 'WS10M': ws10m_sbbn}
+            chl_rep = ch_sbbn_latest
+            lokasi_nama = 'Sibabangun (Muara)'
+
+        # [ALUR 4 & 5] Random Forest Classification
         print("Menjalankan inferensi AI Random Forest...")
         try:
             model = joblib.load('random_forest_model.pkl')
@@ -136,16 +137,14 @@ def run_system():
             
             input_df = pd.DataFrame([rep_features])
             
-            # PURE PREDICT
             prediksi_encoded = model.predict(input_df)[0]
-            status = le.inverse_transform([prediksi_encoded])[0]
-            logika = "Murni Klasifikasi Default Random Forest"
+            status = le.inverse_transform([prediksi_encoded])[0].upper()
                 
         except Exception as ai_err:
             print(f"Error AI: {ai_err}")
-            status, logika = "RENDAH", "Error Loading Model"
+            status = "RENDAH"
 
-        # [ALUR 6] Update Database (Menyimpan Prediksi dan nilai CH3)
+        # [ALUR 6] Update Database
         print("Update status prediksi ke database...")
         cur.execute("""
             UPDATE histori_harian 
@@ -154,20 +153,19 @@ def run_system():
         """, (status, ch3_tuk, ch3_sbbn, tgl))
         conn.commit()
         
-        print(f"Hasil: {status} | Acuan: {lokasi_nama} | {logika}")
+        print(f"Hasil: {status} | Acuan: {lokasi_nama}")
 
-       # [ALUR 7] Telegram Bot Notifikasi
+        # [ALUR 7] Telegram Bot Notifikasi
         if status in ["SEDANG", "TINGGI"]:
             
-            # Format pesan resmi dan profesional tanpa emoji
             msg = (
                 "*INFORMASI POTENSI BANJIR - KAB. TAPANULI TENGAH*\n"
                 "--------------------------------------------------\n\n"
-                f"*Status Prediksi     :* {status}\n"
-                f"*Titik Pemantauan :* Hulu {lokasi_nama}\n\n"
+                f"*Status Prediksi  :* {status}\n"
+                f"*Titik Pantauan   :* Hulu {lokasi_nama}\n\n"
                 "*Data Hidrometeorologi:*\n"
-                f"- Curah Hujan (1 Jam) : {rep_features['chl_rep']} mm\n"
-                f"- Curah Hujan (1 Jam) : {rep_features['CH']} mm\n"
+                f"- Curah Hujan (1 Jam)   : {chl_rep} mm\n" 
+                f"- Curah Hujan (Harian)  : {rep_features['CH']} mm\n"
                 f"- Akumulasi Hujan (CH3) : {rep_features['CH3']:.1f} mm\n"
                 f"- Kelembapan Udara (RH) : {rep_features['RH']} %\n"
                 f"- Suhu Udara (T2M)      : {rep_features['T2M']} °C\n"
@@ -179,6 +177,7 @@ def run_system():
             
             requests.get(f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage", 
                          params={"chat_id": CHANNEL_ID, "text": msg, "parse_mode": "Markdown"})
+
     except Exception as e:
         print(f"Error Operasional: {e}")
         if conn: conn.rollback()
