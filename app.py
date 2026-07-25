@@ -59,11 +59,9 @@ def load_smart_model():
 def send_telegram_simulation(status, station, chl_rep, features_dict):
     try:
         if status == "TINGGI":
-            pesan_himbauan = "BAHAYA: Kondisi cuaca ekstrem terdeteksi. Banjir berpotensi tinggi. Segera lakukan evakuasi."
+            pesan_himbauan = "PERINGATAN DARURAT: Pola hidrometeorologi ekstrem terdeteksi. Potensi luapan sungai sangat tinggi. Segera lakukan evakuasi preventif dan siagakan tim mitigasi bencana."
         elif status == "SEDANG":
-            pesan_himbauan = "WASPADA: Kondisi cuaca cukup ekstrem. Banjir berpotensi sedang. Segera pantau terus kondisi cuaca ."
-        else:
-            pesan_himbauan = "AMAN: Kondisi cuaca dalam batas normal."
+            pesan_himbauan = "WASPADA: Indikator cuaca menunjukkan potensi peningkatan debit air. Tingkatkan frekuensi pemantauan visual pada hulu dan bantaran sungai."
 
         waktu_simulasi = datetime.utcnow() + timedelta(hours=7)
         waktu_lengkap = waktu_simulasi.strftime('%Y-%m-%d %H:%M:%S')
@@ -91,7 +89,7 @@ def send_telegram_simulation(status, station, chl_rep, features_dict):
         requests.get(url, params=params, timeout=10)
     except Exception as e:
         st.error(f"Gagal mengirim notifikasi Telegram: {e}")
-
+        
 # --- 4. FUNGSI HELPER API OPEN-METEO (Live Demo Sidebar) ---
 def fetch_api_only():
     try:
