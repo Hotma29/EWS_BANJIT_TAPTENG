@@ -160,7 +160,7 @@ def run_system():
             if status == "TINGGI":
                 pesan_himbauan = "BAHAYA: Mohon segera lakukan langkah antisipasi dan evakuasi jika diperlukan!"
             elif status == "SEDANG":
-                pesan_himbauan = "WASPADA: Pantau terus kondisi cuaca secara berkala"
+                pesan_himbauan = "WASPADA: Pantau terus kondisi cuaca secara berkala!"
         
             
             msg = (
