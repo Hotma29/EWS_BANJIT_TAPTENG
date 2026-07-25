@@ -60,7 +60,7 @@ def send_telegram_simulation(status, station, chl_rep, features_dict):
     try:
        if status == "TINGGI":
                 pesan_himbauan = "BAHAYA: Mohon segera lakukan langkah antisipasi dan evakuasi jika diperlukan!"
-            elif status == "SEDANG":
+       elif status == "SEDANG":
                 pesan_himbauan = "WASPADA: Pantau terus kondisi cuaca secara berkala!"
 
         waktu_simulasi = datetime.utcnow() + timedelta(hours=7)
