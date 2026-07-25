@@ -123,11 +123,11 @@ def run_system():
         if skor_tukka >= skor_sibabangun:
             rep_features = {'CH': ch_tuk, 'CH3': ch3_tuk, 'RH': rh_tuk, 'T2M': t2m_tuk, 'WS10M': ws10m_tuk}
             chl_rep = ch_tuk_latest
-            lokasi_nama = 'Tukka (Hutanabolon)'
+            lokasi_nama = 'Hulu Tukka'
         else:
             rep_features = {'CH': ch_sbbn, 'CH3': ch3_sbbn, 'RH': rh_sbbn, 'T2M': t2m_sbbn, 'WS10M': ws10m_sbbn}
             chl_rep = ch_sbbn_latest
-            lokasi_nama = 'Sibabangun (Muara)'
+            lokasi_nama = 'Hulu Sibabangun'
 
         # [ALUR 4 & 5] Random Forest Classification
         print("Menjalankan inferensi AI Random Forest...")
@@ -163,7 +163,7 @@ def run_system():
                 "--------------------------------------------------\n\n"
                 f"*Status Prediksi  :* {status}\n"
                 f"*Titik Pantauan   :* Hulu {lokasi_nama}\n\n"
-                "*Data Hidrometeorologi:*\n"
+                "*Data Meteorologi:*\n"
                 f"- Curah Hujan (1 Jam)   : {chl_rep} mm\n" 
                 f"- Curah Hujan (Harian)  : {rep_features['CH']} mm\n"
                 f"- Akumulasi Hujan (CH3) : {rep_features['CH3']:.1f} mm\n"
