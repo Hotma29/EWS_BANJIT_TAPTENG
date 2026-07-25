@@ -157,12 +157,17 @@ def run_system():
 
         # [ALUR 7] Telegram Bot Notifikasi
         if status in ["SEDANG", "TINGGI"]:
+            if status == "TINGGI":
+                pesan_himbauan = "BAHAYA: Mohon segera lakukan langkah antisipasi dan evakuasi jika diperlukan!"
+            else status == "SEDANG":
+                pesan_himbauan = "WASPADA: Pantau terus kondisi cuaca secara berkala"
+        
             
             msg = (
                 "*INFORMASI POTENSI BANJIR - KAB. TAPANULI TENGAH*\n"
                 "--------------------------------------------------\n\n"
-                f"*Status Prediksi  :* {status}\n"
-                f"*Titik Pantauan   :* Hulu {lokasi_nama}\n\n"
+                f"*Potensi Banjir  :* {status} (WASPADA)\n"
+                f"*Titik Sumber   :* {lokasi_nama}\n\n"
                 "*Data Meteorologi:*\n"
                 f"- Curah Hujan (1 Jam)   : {chl_rep} mm\n" 
                 f"- Curah Hujan (Harian)  : {rep_features['CH']} mm\n"
@@ -170,6 +175,7 @@ def run_system():
                 f"- Kelembapan Udara (RH) : {rep_features['RH']} %\n"
                 f"- Suhu Udara (T2M)      : {rep_features['T2M']} °C\n"
                 f"- Kecepatan Angin       : {rep_features['WS10M']} m/s\n\n"
+                f"*Instruksi Mitigasi:*\n{pesan_himbauan}\n\n"
                 f"*Waktu Pembaruan:* {waktu_lengkap} WIB\n"
                 "--------------------------------------------------\n"
                 "_Pesan ini dihasilkan secara otomatis oleh sistem._"
