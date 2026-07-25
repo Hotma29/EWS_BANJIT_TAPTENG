@@ -59,11 +59,11 @@ def load_smart_model():
 def send_telegram_simulation(status, station, chl_rep, features_dict):
     try:
         if status == "TINGGI":
-            pesan_himbauan = "PERINGATAN DARURAT: Pola hidrometeorologi ekstrem terdeteksi. Potensi luapan sungai sangat tinggi. Segera lakukan evakuasi preventif dan siagakan tim mitigasi bencana."
+            pesan_himbauan = "BAHAYA: Kondisi cuaca ekstrem terdeteksi. Banjir berpotensi tinggi. Segera lakukan evakuasi."
         elif status == "SEDANG":
-            pesan_himbauan = "WASPADA: Indikator cuaca menunjukkan potensi peningkatan debit air. Tingkatkan frekuensi pemantauan visual pada hulu dan bantaran sungai."
+            pesan_himbauan = "WASPADA: Kondisi cuaca cukup ekstrem. Banjir berpotensi sedang. Segera pantau terus kondisi cuaca ."
         else:
-            pesan_himbauan = "AMAN: Kondisi hidrometeorologi dalam batas normal."
+            pesan_himbauan = "AMAN: Kondisi cuaca dalam batas normal."
 
         waktu_simulasi = datetime.utcnow() + timedelta(hours=7)
         waktu_lengkap = waktu_simulasi.strftime('%Y-%m-%d %H:%M:%S')
@@ -257,9 +257,9 @@ with tab2:
             status_sim = le.inverse_transform([int(prediksi_kelas)])[0].upper()
             
             if status_sim == "TINGGI":
-                pesan_mitigasi = "⚠️ PERINGATAN DARURAT: Bahaya banjir tinggi. Segera evakuasi!"
+                pesan_mitigasi = "⚠️ BAHAYA: Bahaya banjir tinggi. Segera evakuasi!"
             elif status_sim == "SEDANG":
-                pesan_mitigasi = "👀 WASPADA: Pantau pergerakan debit air secara berkala."
+                pesan_mitigasi = "👀 WASPADA: Pantau terus kondisi cuaca secara berkala."
             else:
                 pesan_mitigasi = "✅ AMAN: Kondisi cuaca dalam batas normal."
 
