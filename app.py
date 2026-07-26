@@ -73,7 +73,6 @@ def send_telegram_simulation(status, station, chl_rep, features_dict):
             f"*Status Prediksi  :* {status}\n"
             f"*Titik Pantauan   :* {station}\n\n"
             "*Data Hidrometeorologi:*\n"
-            f"- Curah Hujan (1 Jam)   : {chl_rep} mm\n"
             f"- Curah Hujan (Harian)  : {features_dict['CH']} mm\n"
             f"- Akumulasi Hujan (CH3) : {features_dict['CH3']} mm\n"
             f"- Kelembapan Udara (RH) : {features_dict['RH']} %\n"
@@ -238,11 +237,9 @@ with tab2:
             
             if skor_tukka >= skor_sibabangun:
                 rep_station = "Hulu Tukka"
-                chl_rep = ch_tuk_latest
                 features_dict = {'CH': ch_tuk, 'CH3': ch3_tuk, 'RH': rh_tuk, 'T2M': t2m_tuk, 'WS10M': ws10m_tuk}
             else:
                 rep_station = "Hulu Sibabangun"
-                chl_rep = ch_sbbn_latest
                 features_dict = {'CH': ch_sbbn, 'CH3': ch3_sbbn, 'RH': rh_sbbn, 'T2M': t2m_sbbn, 'WS10M': ws10m_sbbn}
             
             # 2. LOGIKA KEPUTUSAN MURNI AI
