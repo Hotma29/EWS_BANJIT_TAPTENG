@@ -158,7 +158,7 @@ with st.sidebar:
             st.markdown("### 📍 Hulu Sibabangun")
             st.markdown("───────────────")
             st.write("**Titik Koordinat :** `1.541647, 98.993431`")
-            st.write(f"**Waktu Respons (Ping) :** `{time_s} ms`")
+            st.write(f"**Latency (Ping) :** `{time_s} ms`")
             
             st.code(
                 f"CURAH HUJAN (mm/jam): {rs['precipitation']} mm\n"
