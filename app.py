@@ -89,6 +89,68 @@ def send_telegram_simulation(status, station,features_dict):
     except Exception as e:
         st.error(f"Gagal mengirim notifikasi Telegram: {e}")
 
+# --- 4. FUNGSI HELPER API OPEN-METEO (Live Demo Sidang) ---
+def fetch_api_proof():
+    try:
+        # Menggunakan koordinat Hulu Tukka sebagai sampel pembuktian
+        url = "https://api.open-meteo.com/v1/forecast?latitude=1.699608&longitude=98.910028&current=precipitation,relative_humidity_2m,temperature_2m,wind_speed_10m&timezone=Asia/Jakarta"
+        
+        res = requests.get(url, timeout=10)
+        
+        # Trik Rahasia: Menghitung waktu respons asli dari server API dalam satuan milidetik (ms)
+        response_time = int(res.elapsed.total_seconds() * 1000)
+        
+        return res.json()['current'], response_time
+    except:
+        return None, None
+
+# --- 5. SIDEBAR KONTROL ---
+with st.sidebar:
+    st.title("⚙️ Panel Kontrol API")
+    st.caption("Gunakan panel ini saat sidang untuk validasi aliran data.")
+    
+    if st.button("📡 Uji Koneksi Open-Meteo", type="primary", use_container_width=True):
+        rt, resp_time = fetch_api_proof()
+        
+        if rt:
+            waktu_sekarang = (datetime.utcnow() + timedelta(hours=7)).strftime('%d-%m-%Y %H:%M')
+            
+            st.markdown("### Status API")
+            st.markdown("───────────────")
+            st.success("✓ Open-Meteo Connected")
+            
+            st.write("**Response Time :**")
+            st.code(f"{resp_time} ms")
+            
+            st.write("**Last Request :**")
+            st.code(f"{waktu_sekarang} WIB")
+            
+            st.write("**Latitude :**")
+            st.code("1.699608")
+            
+            st.write("**Longitude :**")
+            st.code("98.910028")
+            
+            st.markdown("<br>", unsafe_allow_html=True)
+            
+            st.markdown("### Current API Response")
+            st.markdown("───────────────")
+            
+            st.write("**precipitation :**")
+            st.code(f"{rt['precipitation']} mm")
+            
+            st.write("**RH :**")
+            st.code(f"{rt['relative_humidity_2m']} %")
+            
+            st.write("**Temperature :**")
+            st.code(f"{rt['temperature_2m']} °C")
+            
+            st.write("**Wind :**")
+            st.code(f"{rt['wind_speed_10m']} m/s")
+            
+        else:
+            st.error("❌ Gagal terhubung ke server Open-Meteo.")
+
 
 
 # --- 6. MAIN DASHBOARD ---
