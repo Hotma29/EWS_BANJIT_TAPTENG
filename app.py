@@ -109,62 +109,83 @@ def fetch_api_proof():
 # --- 5. SIDEBAR KONTROL ---
 with st.sidebar:
     st.title("⚙️ Panel Kontrol API")
-    st.caption("Validasi aliran HTTP GET Open-Meteo secara Real-Time.")
+    st.caption("Validasi aliran data Open-Meteo secara Real-Time.")
     
+    # Inisialisasi 'memori' untuk menyimpan hasil API agar tidak hilang saat tombol lain ditekan
+    if "api_data" not in st.session_state:
+        st.session_state.api_data = None
+        st.session_state.waktu_request = None
+    
+    # Tombol utama untuk menarik data
     if st.button("📡 Uji Koneksi Server (Live)", type="primary", use_container_width=True):
-        rt, rs, time_t, time_s = fetch_api_proof()
+        st.session_state.api_data = fetch_api_proof()
+        st.session_state.waktu_request = (datetime.utcnow() + timedelta(hours=7)).strftime('%d-%m-%Y %H:%M:%S')
+    
+    # Jika data sudah ditarik dan tersimpan di memori, tampilkan hasilnya
+    if st.session_state.api_data:
+        rt, rs, time_t, time_s = st.session_state.api_data
         
         if rt and rs:
-            waktu_sekarang = (datetime.utcnow() + timedelta(hours=7)).strftime('%d-%m-%Y %H:%M:%S')
+            waktu_sekarang = st.session_state.waktu_request
             avg_latency = (time_t + time_s) // 2
             
             # --- HEADER STATUS ---
             st.markdown("### 🌐 Status Jaringan")
             st.markdown("───────────────")
-            st.success("✓ Open-Meteo API Connected")
-            st.write(f"**Last Request :** `{waktu_sekarang} WIB`")
-            st.write(f"**Avg Latency  :** `{avg_latency} ms`")
+            st.success("✓ API Open-Meteo Terhubung")
+            st.write(f"**Permintaan Terakhir :** `{waktu_sekarang} WIB`")
+            st.write(f"**Rata-Rata Respons   :** `{avg_latency} ms`")
             
             # --- DATA HULU TUKKA ---
             st.markdown("<br>", unsafe_allow_html=True)
             st.markdown("### 📍 Hulu Tukka")
             st.markdown("───────────────")
-            st.write("**Coordinates :** `1.699608, 98.910028`")
-            st.write(f"**Ping Latency :** `{time_t} ms`")
+            st.write("**Titik Koordinat :** `1.699608, 98.910028`")
+            st.write(f"**Waktu Respons (Ping) :** `{time_t} ms`")
             
-            # Tampilan gaya log server (Format YAML agar berwarna)
+            # Tampilan gaya log server dengan bahasa Indonesia
             st.code(
-                f"PRECIPITATION : {rt['precipitation']} mm\n"
-                f"RELATIVE HUM  : {rt['relative_humidity_2m']} %\n"
-                f"TEMPERATURE   : {rt['temperature_2m']} °C\n"
-                f"WIND SPEED    : {rt['wind_speed_10m']} m/s", 
+                f"CURAH HUJAN (1 JAM) : {rt['precipitation']} mm\n"
+                f"KELEMBAPAN UDARA    : {rt['relative_humidity_2m']} %\n"
+                f"SUHU UDARA          : {rt['temperature_2m']} °C\n"
+                f"KECEPATAN ANGIN     : {rt['wind_speed_10m']} m/s", 
                 language="yaml"
             )
             
             # Bukti JSON asli untuk Dosen Penguji
-            with st.expander("📦 View Raw JSON Payload"):
+            with st.expander("📦 Lihat Data JSON Asli"):
                 st.json(rt)
 
             # --- DATA HULU SIBABANGUN ---
             st.markdown("<br>", unsafe_allow_html=True)
             st.markdown("### 📍 Hulu Sibabangun")
             st.markdown("───────────────")
-            st.write("**Coordinates :** `1.541647, 98.993431`")
-            st.write(f"**Ping Latency :** `{time_s} ms`")
+            st.write("**Titik Koordinat :** `1.541647, 98.993431`")
+            st.write(f"**Waktu Respons (Ping) :** `{time_s} ms`")
             
             st.code(
-                f"PRECIPITATION : {rs['precipitation']} mm\n"
-                f"RELATIVE HUM  : {rs['relative_humidity_2m']} %\n"
-                f"TEMPERATURE   : {rs['temperature_2m']} °C\n"
-                f"WIND SPEED    : {rs['wind_speed_10m']} m/s", 
+                f"CURAH HUJAN (1 JAM) : {rs['precipitation']} mm\n"
+                f"KELEMBAPAN UDARA    : {rs['relative_humidity_2m']} %\n"
+                f"SUHU UDARA          : {rs['temperature_2m']} °C\n"
+                f"KECEPATAN ANGIN     : {rs['wind_speed_10m']} m/s", 
                 language="yaml"
             )
             
-            with st.expander("📦 View Raw JSON Payload"):
+            with st.expander("📦 Lihat Data JSON Asli"):
                 st.json(rs)
+                
+            st.markdown("---")
+            
+            # Tombol untuk MENGHAPUS / MENUTUP hasil dari layar
+            if st.button("🧹 Tutup & Kosongkan Hasil", use_container_width=True):
+                st.session_state.api_data = None
+                st.rerun() # Refresh layar agar kembali kosong
 
         else:
             st.error("❌ Timeout: Gagal terhubung ke server Open-Meteo.")
+            if st.button("🧹 Tutup", use_container_width=True):
+                st.session_state.api_data = None
+                st.rerun()
 
 
 
