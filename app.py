@@ -164,9 +164,9 @@ with tab1:
                 st.write("") 
                 
                 t1, t2, t3 = st.columns(3)
-                t1.metric("Hujan (1 Jam)", f"{latest['ch_tuk_latest']} mm")
-                t2.metric("Total Harian", f"{latest['ch_tuk']} mm")
-                t3.metric("Akumulasi (3 Hari)", f"{latest['ch3_tuk']} mm")
+                t1.metric("Hujan Saat Ini (1 Jam Terakhir)", f"{latest['ch_tuk_latest']} mm")
+                t2.metric("Curah Hujan Harian (CH)", f"{latest['ch_tuk']} mm")
+                t3.metric("Akumulasi Curah Hujan 3 hari (CH3)", f"{latest['ch3_tuk']} mm")
                 
                 st.write("") 
                 t4, t5, t6 = st.columns(3)
@@ -182,9 +182,9 @@ with tab1:
                 st.write("") 
                 
                 s1, s2, s3 = st.columns(3)
-                s1.metric("Hujan (1 Jam)", f"{latest['ch_sbbn_latest']} mm")
-                s2.metric("Total Harian", f"{latest['ch_sbbn']} mm")
-                s3.metric("Akumulasi (3 Hari)", f"{latest['ch3_sbbn']} mm")
+                s1.metric("Hujan Saat Ini (1 Jam Terakhir)", f"{latest['ch_sbbn_latest']} mm")
+                s2.metric("Curah Hujan Harian (CH)", f"{latest['ch_sbbn']} mm")
+                s3.metric("Akumulasi Curah Hujan 3 hari (CH3)", f"{latest['ch3_sbbn']} mm")
                 
                 st.write("") 
                 s4, s5, s6 = st.columns(3)
