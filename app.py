@@ -88,41 +88,8 @@ def send_telegram_simulation(status, station,features_dict):
         requests.get(url, params=params, timeout=10)
     except Exception as e:
         st.error(f"Gagal mengirim notifikasi Telegram: {e}")
-        
-# --- 4. FUNGSI HELPER API OPEN-METEO (Live Demo Sidebar) ---
-def fetch_api_only():
-    try:
-        url_t = "https://api.open-meteo.com/v1/forecast?latitude=1.699608&longitude=98.910028&current=precipitation,relative_humidity_2m,temperature_2m,wind_speed_10m&timezone=Asia/Jakarta"
-        url_s = "https://api.open-meteo.com/v1/forecast?latitude=1.541647&longitude=98.993431&current=precipitation,relative_humidity_2m,temperature_2m,wind_speed_10m&timezone=Asia/Jakarta"
-        
-        res_t = requests.get(url_t, timeout=10).json()
-        res_s = requests.get(url_s, timeout=10).json()
-        return res_t['current'], res_s['current']
-    except:
-        return None, None
 
-# --- 5. SIDEBAR KONTROL ---
-with st.sidebar:
-    st.title("⚙️ Panel Kontrol")
-    if st.button("🔄 Tarik Data API (Live Demo)", use_container_width=True):
-        rt, rs = fetch_api_only()
-        if rt and rs:
-            st.success("Koneksi Open-Meteo Berhasil!")
-            
-            st.markdown("### 📍 Hulu Tukka")
-            st.write(f"🌧️ **Hujan (1 Jam):** {rt['precipitation']} mm")
-            st.write(f"💧 **Kelembapan:** {rt['relative_humidity_2m']}%")
-            st.write(f"🌡️ **Suhu Udara:** {rt['temperature_2m']}°C")
-            st.write(f"💨 **Kecepatan Angin:** {rt['wind_speed_10m']} m/s")
-            st.divider()
-            
-            st.markdown("### 📍 Hulu Sibabangun")
-            st.write(f"🌧️ **Hujan (1 Jam):** {rs['precipitation']} mm")
-            st.write(f"💧 **Kelembapan:** {rs['relative_humidity_2m']}%")
-            st.write(f"🌡️ **Suhu Udara:** {rs['temperature_2m']}°C")
-            st.write(f"💨 **Kecepatan Angin:** {rs['wind_speed_10m']} m/s")
-            
-            st.caption("ℹ️ Data simulasi API ini tidak disimpan ke database.")
+
 
 # --- 6. MAIN DASHBOARD ---
 st.title("🌊 Dashboard Monitoring Potensi Banjir Kabupaten Tapanuli Tengah")
