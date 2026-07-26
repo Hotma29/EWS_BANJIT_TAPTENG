@@ -174,7 +174,7 @@ with st.sidebar:
             st.markdown("---")
             
             # Tombol untuk MENGHAPUS / MENUTUP hasil dari layar
-            if st.button("🧹 Tutup & Kosongkan Hasil", use_container_width=True):
+            if st.button("🧹 Tutup", use_container_width=True):
                 st.session_state.api_data = None
                 st.rerun() # Refresh layar agar kembali kosong
 
