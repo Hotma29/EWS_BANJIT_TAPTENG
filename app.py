@@ -56,7 +56,7 @@ def load_smart_model():
     return model, le
 
 # --- 3. FUNGSI KIRIM TELEGRAM (Simulasi Profesional) ---
-def send_telegram_simulation(status, station, chl_rep, features_dict):
+def send_telegram_simulation(status, station,features_dict):
     try:
         if status == "TINGGI":
             pesan_himbauan = "BAHAYA: Mohon segera lakukan langkah antisipasi dan evakuasi jika diperlukan!"
@@ -72,7 +72,7 @@ def send_telegram_simulation(status, station, chl_rep, features_dict):
             "--------------------------------------------------\n\n"
             f"*Status Prediksi  :* {status}\n"
             f"*Titik Pantauan   :* {station}\n\n"
-            "*Data Hidrometeorologi:*\n"
+            "*Data Meteorologi:*\n"
             f"- Curah Hujan (Harian)  : {features_dict['CH']} mm\n"
             f"- Akumulasi Hujan (CH3) : {features_dict['CH3']} mm\n"
             f"- Kelembapan Udara (RH) : {features_dict['RH']} %\n"
@@ -227,7 +227,7 @@ with tab2:
         t2m_sbbn = st.number_input("Suhu Udara / T2M (°C) ", 10.0, 45.0, 28.0, key="sim_t2m_sbbn")
         ws10m_sbbn = st.number_input("Kecepatan Angin / WS10M (m/s) ", 0.0, 30.0, 2.0, key="sim_ws_sbbn")
 
-    if st.button("🚀 Jalankan Inferensi AI", type="primary", use_container_width=True):
+    if st.button("🚀 Jalankan", type="primary", use_container_width=True):
         try:
             model, le = load_smart_model()
             
