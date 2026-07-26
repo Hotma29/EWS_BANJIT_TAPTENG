@@ -171,7 +171,7 @@ with tab1:
                 st.write("") 
                 t4, t5, t6 = st.columns(3)
                 t4.metric("Kelembapan (RH)", f"{latest['rh_tuk']} %")
-                t5.metric("Suhu Udara", f"{latest['t2m_tuk']} °C")
+                t5.metric("Suhu Udara (T2M)", f"{latest['t2m_tuk']} °C")
                 t6.metric("Angin (WS10M)", f"{latest['ws10m_tuk']} m/s")
 
             with col_spacer:
@@ -189,7 +189,7 @@ with tab1:
                 st.write("") 
                 s4, s5, s6 = st.columns(3)
                 s4.metric("Kelembapan (RH)", f"{latest['rh_sbbn']} %")
-                s5.metric("Suhu Udara", f"{latest['t2m_sbbn']} °C")
+                s5.metric("Suhu Udara (T2M)", f"{latest['t2m_sbbn']} °C")
                 s6.metric("Angin (WS10M)", f"{latest['ws10m_sbbn']} m/s")
 
             st.markdown("---")
