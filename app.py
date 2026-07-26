@@ -127,14 +127,11 @@ with st.sidebar:
         
         if rt and rs:
             waktu_sekarang = st.session_state.waktu_request
-            avg_latency = (time_t + time_s) // 2
-            
+           
             # --- HEADER STATUS ---
-            st.markdown("### 🌐 Status Jaringan")
-            st.markdown("───────────────")
             st.success("✓ API Open-Meteo Terhubung")
             st.write(f"**Permintaan Terakhir :** `{waktu_sekarang} WIB`")
-            st.write(f"**Rata-Rata Respons   :** `{avg_latency} ms`")
+          
             
             # --- DATA HULU TUKKA ---
             st.markdown("<br>", unsafe_allow_html=True)
@@ -145,7 +142,7 @@ with st.sidebar:
             
             # Tampilan gaya log server dengan bahasa Indonesia
             st.code(
-                f"CURAH HUJAN: {rt['precipitation']} mm\n"
+                f"CURAH HUJAN (mm/jam): {rt['precipitation']} mm\n"
                 f"KELEMBAPAN UDARA    : {rt['relative_humidity_2m']} %\n"
                 f"SUHU UDARA          : {rt['temperature_2m']} °C\n"
                 f"KECEPATAN ANGIN     : {rt['wind_speed_10m']} m/s", 
@@ -164,7 +161,7 @@ with st.sidebar:
             st.write(f"**Waktu Respons (Ping) :** `{time_s} ms`")
             
             st.code(
-                f"CURAH HUJAN: {rs['precipitation']} mm\n"
+                f"CURAH HUJAN (mm/jam): {rs['precipitation']} mm\n"
                 f"KELEMBAPAN UDARA    : {rs['relative_humidity_2m']} %\n"
                 f"SUHU UDARA          : {rs['temperature_2m']} °C\n"
                 f"KECEPATAN ANGIN     : {rs['wind_speed_10m']} m/s", 
