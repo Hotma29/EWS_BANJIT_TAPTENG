@@ -109,7 +109,7 @@ def fetch_api_proof():
 # --- 5. SIDEBAR KONTROL ---
 with st.sidebar:
     st.title("⚙️ Panel Kontrol API")
-    st.caption("Validasi aliran data Open-Meteo secara Real-Time.")
+    st.caption("Uji penarikan data Open-Meteo.")
     
     # Inisialisasi 'memori' untuk menyimpan hasil API agar tidak hilang saat tombol lain ditekan
     if "api_data" not in st.session_state:
@@ -117,7 +117,7 @@ with st.sidebar:
         st.session_state.waktu_request = None
     
     # Tombol utama untuk menarik data
-    if st.button("📡 Uji Koneksi Server (Live)", type="primary", use_container_width=True):
+    if st.button("📡 Uji Koneksi API", type="primary", use_container_width=True):
         st.session_state.api_data = fetch_api_proof()
         st.session_state.waktu_request = (datetime.utcnow() + timedelta(hours=7)).strftime('%d-%m-%Y %H:%M:%S')
     
@@ -141,11 +141,11 @@ with st.sidebar:
             st.markdown("### 📍 Hulu Tukka")
             st.markdown("───────────────")
             st.write("**Titik Koordinat :** `1.699608, 98.910028`")
-            st.write(f"**Waktu Respons (Ping) :** `{time_t} ms`")
+            st.write(f"**Latency (Ping) :** `{time_t} ms`")
             
             # Tampilan gaya log server dengan bahasa Indonesia
             st.code(
-                f"CURAH HUJAN (1 JAM) : {rt['precipitation']} mm\n"
+                f"CURAH HUJAN: {rt['precipitation']} mm\n"
                 f"KELEMBAPAN UDARA    : {rt['relative_humidity_2m']} %\n"
                 f"SUHU UDARA          : {rt['temperature_2m']} °C\n"
                 f"KECEPATAN ANGIN     : {rt['wind_speed_10m']} m/s", 
@@ -164,7 +164,7 @@ with st.sidebar:
             st.write(f"**Waktu Respons (Ping) :** `{time_s} ms`")
             
             st.code(
-                f"CURAH HUJAN (1 JAM) : {rs['precipitation']} mm\n"
+                f"CURAH HUJAN: {rs['precipitation']} mm\n"
                 f"KELEMBAPAN UDARA    : {rs['relative_humidity_2m']} %\n"
                 f"SUHU UDARA          : {rs['temperature_2m']} °C\n"
                 f"KECEPATAN ANGIN     : {rs['wind_speed_10m']} m/s", 
