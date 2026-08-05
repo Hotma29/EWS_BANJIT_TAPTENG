@@ -56,7 +56,7 @@ def load_smart_model():
     return model, le
 
 # --- 3. FUNGSI KIRIM TELEGRAM (Simulasi Profesional) ---
-def send_telegram_simulation(status, station,features_dict):
+def send_telegram_simulation(status, station, features_dict):
     try:
         if status == "TINGGI":
             pesan_himbauan = "BAHAYA: Mohon segera lakukan langkah antisipasi dan evakuasi jika diperlukan!"
@@ -92,99 +92,99 @@ def send_telegram_simulation(status, station,features_dict):
 # --- 4. FUNGSI HELPER API OPEN-METEO (Live Demo Sidang) ---
 def fetch_api_proof():
     try:
-        url_t = "https://api.open-meteo.com/v1/forecast?latitude=1.699608&longitude=98.910028&current=precipitation,relative_humidity_2m,temperature_2m,wind_speed_10m&timezone=Asia/Jakarta"
-        url_s = "https://api.open-meteo.com/v1/forecast?latitude=1.541647&longitude=98.993431&current=precipitation,relative_humidity_2m,temperature_2m,wind_speed_10m&timezone=Asia/Jakarta"
+        url_t = "https://api.open-meteo.com/v1/forecast?latitude=1.699608&longitude=98.910028&current=precipitation,relative_humidity_2m,temperature_2m,wind_speed_10m&timezone=Asia/Jakarta&wind_speed_unit=ms"
+        url_s = "https://api.open-meteo.com/v1/forecast?latitude=1.541647&longitude=98.993431&current=precipitation,relative_humidity_2m,temperature_2m,wind_speed_10m&timezone=Asia/Jakarta&wind_speed_unit=ms"
         
-        # Tarik data sekaligus hitung waktu respons asli (Ping)
-        res_t = requests.get(url_t, timeout=30)
-        res_s = requests.get(url_s, timeout=30)
+        # Trik Penyamaran Anti-Blokir
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+        
+        res_t = requests.get(url_t, headers=headers, timeout=15)
+        res_s = requests.get(url_s, headers=headers, timeout=15)
+        
+        res_t.raise_for_status()
+        res_s.raise_for_status()
         
         resp_time_t = int(res_t.elapsed.total_seconds() * 1000)
         resp_time_s = int(res_s.elapsed.total_seconds() * 1000)
         
-        return res_t.json()['current'], res_s.json()['current'], resp_time_t, resp_time_s
-    except Exception:
-        return None, None, None, None
+        return res_t.json()['current'], res_s.json()['current'], resp_time_t, resp_time_s, None
+    except Exception as e:
+        return None, None, None, None, str(e)
 
 # --- 5. SIDEBAR KONTROL ---
 with st.sidebar:
     st.title("⚙️ Panel Kontrol API")
     st.caption("Uji penarikan data Open-Meteo.")
     
-    # Inisialisasi 'memori' untuk menyimpan hasil API agar tidak hilang saat tombol lain ditekan
     if "api_data" not in st.session_state:
         st.session_state.api_data = None
         st.session_state.waktu_request = None
+        st.session_state.api_error = None
     
-    # Tombol utama untuk menarik data
     if st.button("📡 Uji Koneksi API", type="primary", use_container_width=True):
-        st.session_state.api_data = fetch_api_proof()
-        st.session_state.waktu_request = (datetime.utcnow() + timedelta(hours=7)).strftime('%d-%m-%Y %H:%M:%S')
-    
-    # Jika data sudah ditarik dan tersimpan di memori, tampilkan hasilnya
-    if st.session_state.api_data:
-        rt, rs, time_t, time_s = st.session_state.api_data
-        
-        if rt and rs:
-            waktu_sekarang = st.session_state.waktu_request
-           
-            # --- HEADER STATUS ---
-            st.success("✓ API Open-Meteo Terhubung")
-            st.write(f"**Permintaan Terakhir :** `{waktu_sekarang} WIB`")
-          
-            
-            # --- DATA HULU TUKKA ---
-            st.markdown("<br>", unsafe_allow_html=True)
-            st.markdown("### 📍 Hulu Tukka")
-            st.markdown("───────────────")
-            st.write("**Titik Koordinat :** `1.699608, 98.910028`")
-            st.write(f"**Latency (Ping) :** `{time_t} ms`")
-            
-            # Tampilan gaya log server dengan bahasa Indonesia
-            st.code(
-                f"CURAH HUJAN (mm/jam): {rt['precipitation']} mm\n"
-                f"KELEMBAPAN UDARA    : {rt['relative_humidity_2m']} %\n"
-                f"SUHU UDARA          : {rt['temperature_2m']} °C\n"
-                f"KECEPATAN ANGIN     : {rt['wind_speed_10m']} m/s", 
-                language="yaml"
-            )
-            
-            # Bukti JSON asli untuk Dosen Penguji
-            with st.expander("📦 Lihat Data JSON Asli"):
-                st.json(rt)
-
-            # --- DATA HULU SIBABANGUN ---
-            st.markdown("<br>", unsafe_allow_html=True)
-            st.markdown("### 📍 Hulu Sibabangun")
-            st.markdown("───────────────")
-            st.write("**Titik Koordinat :** `1.541647, 98.993431`")
-            st.write(f"**Latency (Ping) :** `{time_s} ms`")
-            
-            st.code(
-                f"CURAH HUJAN (mm/jam): {rs['precipitation']} mm\n"
-                f"KELEMBAPAN UDARA    : {rs['relative_humidity_2m']} %\n"
-                f"SUHU UDARA          : {rs['temperature_2m']} °C\n"
-                f"KECEPATAN ANGIN     : {rs['wind_speed_10m']} m/s", 
-                language="yaml"
-            )
-            
-            with st.expander("📦 Lihat Data JSON Asli"):
-                st.json(rs)
-                
-            st.markdown("---")
-            
-            # Tombol untuk MENGHAPUS / MENUTUP hasil dari layar
-            if st.button("🧹 Tutup", use_container_width=True):
-                st.session_state.api_data = None
-                st.rerun() # Refresh layar agar kembali kosong
-
+        rt, rs, time_t, time_s, err_msg = fetch_api_proof()
+        if err_msg:
+            st.session_state.api_data = None
+            st.session_state.api_error = err_msg
         else:
-            st.error("❌ Timeout: Gagal terhubung ke server Open-Meteo.")
-            if st.button("🧹 Tutup", use_container_width=True):
-                st.session_state.api_data = None
-                st.rerun()
+            st.session_state.api_data = (rt, rs, time_t, time_s)
+            st.session_state.api_error = None
+            st.session_state.waktu_request = (datetime.utcnow() + timedelta(hours=7)).strftime('%d-%m-%Y %H:%M:%S')
+    
+    if st.session_state.api_error:
+        st.error("❌ Timeout: Gagal terhubung ke server Open-Meteo.")
+        st.warning(f"Detail Error:\n{st.session_state.api_error}")
+        if st.button("🧹 Tutup", use_container_width=True):
+            st.session_state.api_error = None
+            st.rerun()
+            
+    elif st.session_state.api_data:
+        rt, rs, time_t, time_s = st.session_state.api_data
+        waktu_sekarang = st.session_state.waktu_request
+        
+        st.success("✓ API Open-Meteo Terhubung")
+        st.write(f"**Permintaan Terakhir :** `{waktu_sekarang} WIB`")
+        
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("### 📍 Hulu Tukka")
+        st.markdown("───────────────")
+        st.write("**Titik Koordinat :** `1.699608, 98.910028`")
+        st.write(f"**Latency (Ping) :** `{time_t} ms`")
+        
+        st.code(
+            f"CURAH HUJAN (mm/jam): {rt['precipitation']} mm\n"
+            f"KELEMBAPAN UDARA    : {rt['relative_humidity_2m']} %\n"
+            f"SUHU UDARA          : {rt['temperature_2m']} °C\n"
+            f"KECEPATAN ANGIN     : {rt['wind_speed_10m']} m/s", 
+            language="yaml"
+        )
+        
+        with st.expander("📦 Lihat Data JSON Asli"):
+            st.json(rt)
 
-
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("### 📍 Hulu Sibabangun")
+        st.markdown("───────────────")
+        st.write("**Titik Koordinat :** `1.541647, 98.993431`")
+        st.write(f"**Latency (Ping) :** `{time_s} ms`")
+        
+        st.code(
+            f"CURAH HUJAN (mm/jam): {rs['precipitation']} mm\n"
+            f"KELEMBAPAN UDARA    : {rs['relative_humidity_2m']} %\n"
+            f"SUHU UDARA          : {rs['temperature_2m']} °C\n"
+            f"KECEPATAN ANGIN     : {rs['wind_speed_10m']} m/s", 
+            language="yaml"
+        )
+        
+        with st.expander("📦 Lihat Data JSON Asli"):
+            st.json(rs)
+            
+        st.markdown("---")
+        if st.button("🧹 Tutup", use_container_width=True):
+            st.session_state.api_data = None
+            st.rerun()
 
 # --- 6. MAIN DASHBOARD ---
 st.title("🌊 Dashboard Monitoring Potensi Banjir Kabupaten Tapanuli Tengah")
@@ -275,6 +275,7 @@ with tab2:
     col_a, col_b = st.columns(2)
     with col_a:
         st.markdown("### 📍 Input Hulu Tukka")
+        ch_tuk_latest = st.number_input("Hujan 1 Jam Terakhir (mm)", 0.0, 100.0, 0.0, key="sim_chl_tuk")
         ch_tuk = st.number_input("Hujan Hari Ini (mm)", 0.0, 300.0, 10.0, key="sim_ch_tuk")
         ch3_tuk = st.number_input("Akumulasi 3 Hari (mm)", 0.0, 500.0, 20.0, key="sim_ch3_tuk")
         rh_tuk = st.slider("Kelembapan / RH (%)", 0, 100, 80, key="sim_rh_tuk")
@@ -283,13 +284,14 @@ with tab2:
         
     with col_b:
         st.markdown("### 📍 Input Hulu Sibabangun")
+        ch_sbbn_latest = st.number_input("Hujan 1 Jam Terakhir (mm) ", 0.0, 100.0, 0.0, key="sim_chl_sbbn")
         ch_sbbn = st.number_input("Hujan Hari Ini (mm) ", 0.0, 300.0, 5.0, key="sim_ch_sbbn")
         ch3_sbbn = st.number_input("Akumulasi 3 Hari (mm) ", 0.0, 500.0, 10.0, key="sim_ch3_sbbn")
         rh_sbbn = st.slider("Kelembapan / RH (%) ", 0, 100, 75, key="sim_rh_sbbn")
         t2m_sbbn = st.number_input("Suhu Udara / T2M (°C) ", 10.0, 45.0, 28.0, key="sim_t2m_sbbn")
         ws10m_sbbn = st.number_input("Kecepatan Angin / WS10M (m/s) ", 0.0, 30.0, 2.0, key="sim_ws_sbbn")
 
-    if st.button("🚀 Jalankan", type="primary", use_container_width=True):
+    if st.button("🚀 Jalankan Analisis", type="primary", use_container_width=True):
         try:
             model, le = load_smart_model()
             
@@ -332,7 +334,7 @@ with tab2:
 
             # --- NOTIFIKASI TELEGRAM ---
             if status_sim in ["SEDANG", "TINGGI"]:
-                send_telegram_simulation(status_sim, rep_station, chl_rep, features_dict)
+                send_telegram_simulation(status_sim, rep_station, features_dict)
                 st.toast("🚨 Notifikasi Bahaya Simulasi berhasil dikirim ke Telegram!", icon="🚨")
 
         except Exception as e:
