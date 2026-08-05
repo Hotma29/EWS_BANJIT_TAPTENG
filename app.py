@@ -96,8 +96,8 @@ def fetch_api_proof():
         url_s = "https://api.open-meteo.com/v1/forecast?latitude=1.541647&longitude=98.993431&current=precipitation,relative_humidity_2m,temperature_2m,wind_speed_10m&timezone=Asia/Jakarta"
         
         # Tarik data sekaligus hitung waktu respons asli (Ping)
-        res_t = requests.get(url_t, timeout=10)
-        res_s = requests.get(url_s, timeout=10)
+        res_t = requests.get(url_t, timeout=30)
+        res_s = requests.get(url_s, timeout=30)
         
         resp_time_t = int(res_t.elapsed.total_seconds() * 1000)
         resp_time_s = int(res_s.elapsed.total_seconds() * 1000)
