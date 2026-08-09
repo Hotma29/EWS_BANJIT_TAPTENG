@@ -187,7 +187,7 @@ with st.sidebar:
             st.rerun()
 
 # --- 6. MAIN DASHBOARD ---
-st.title("🌊 Dashboard Monitoring Potensi Banjir Kabupaten Tapanuli Tengah")
+st.title("🌊 Dashboard Monitoring Potensi Banjir Bandang Kabupaten Tapanuli Tengah")
 tab1, tab2 = st.tabs(["📊 Monitoring Real-Time", "🧪 Mode Simulasi"])
 
 with tab1:
@@ -211,7 +211,7 @@ with tab1:
             
             st.markdown(f"""
                 <div class="status-box" style="background-color: {bg_color};">
-                    <p style="font-size: 1.2rem; opacity: 0.9;">STATUS RISIKO BANJIR SAAT INI (PREDIKSI RANDOM FOREST):</p>
+                    <p style="font-size: 1.2rem; opacity: 0.9;">STATUS RISIKO BANJIR BANDANG SAAT INI (PREDIKSI RANDOM FOREST):</p>
                     <h1 style="font-size: 4.5rem; margin: 0; letter-spacing: 3px;">{status}</h1>
                     <p>Pembaruan Terakhir: {latest['created_at']} WIB</p>
                 </div>
@@ -255,7 +255,7 @@ with tab1:
                 s6.metric("Angin (WS10M)", f"{latest['ws10m_sbbn']} m/s")
 
             st.markdown("---")
-            st.subheader("📊 Perbandingan Hujan Harian (7 Hari Terakhir)")
+            st.subheader("📊 Riwayat Hujan Harian (7 Hari Terakhir)")
             df_plot = df_db.sort_values('tanggal')
             fig = go.Figure()
             fig.add_trace(go.Bar(x=df_plot['tanggal'], y=df_plot['ch_tuk'], name='Total Hulu Tukka', marker_color='#1976d2'))
@@ -275,7 +275,7 @@ with tab2:
     col_a, col_b = st.columns(2)
     with col_a:
         st.markdown("### 📍 Input Hulu Tukka")
-        ch_tuk_latest = st.number_input("Hujan 1 Jam Terakhir (mm)", 0.0, 100.0, 0.0, key="sim_chl_tuk")
+    
         ch_tuk = st.number_input("Hujan Hari Ini (mm)", 0.0, 300.0, 10.0, key="sim_ch_tuk")
         ch3_tuk = st.number_input("Akumulasi 3 Hari (mm)", 0.0, 500.0, 20.0, key="sim_ch3_tuk")
         rh_tuk = st.slider("Kelembapan / RH (%)", 0, 100, 80, key="sim_rh_tuk")
@@ -284,7 +284,7 @@ with tab2:
         
     with col_b:
         st.markdown("### 📍 Input Hulu Sibabangun")
-        ch_sbbn_latest = st.number_input("Hujan 1 Jam Terakhir (mm) ", 0.0, 100.0, 0.0, key="sim_chl_sbbn")
+     
         ch_sbbn = st.number_input("Hujan Hari Ini (mm) ", 0.0, 300.0, 5.0, key="sim_ch_sbbn")
         ch3_sbbn = st.number_input("Akumulasi 3 Hari (mm) ", 0.0, 500.0, 10.0, key="sim_ch3_sbbn")
         rh_sbbn = st.slider("Kelembapan / RH (%) ", 0, 100, 75, key="sim_rh_sbbn")
