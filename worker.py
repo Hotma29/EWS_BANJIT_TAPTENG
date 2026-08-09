@@ -164,7 +164,7 @@ def run_system():
         
             
             msg = (
-                "*INFORMASI POTENSI BANJIR - KAB. TAPANULI TENGAH*\n"
+                "*INFORMASI POTENSI BANJIR BANDANG - KAB. TAPANULI TENGAH*\n"
                 "--------------------------------------------------\n\n"
                 f"*Potensi Banjir  :* {status} (WASPADA)\n"
                 f"*Titik Sumber   :* {lokasi_nama}\n\n"
