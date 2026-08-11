@@ -27,7 +27,7 @@ def fetch_open_meteo(lat, lon, retries=3, delay=5):
         "current": ["precipitation", "relative_humidity_2m", "temperature_2m", "wind_speed_10m"],
         "daily": ["precipitation_sum"],
         "timezone": "Asia/Jakarta",
-        "wind_speed_unit": "ms" 
+        "wind_speed_unit": "ms"  
     }
     
     for i in range(retries):
@@ -36,7 +36,7 @@ def fetch_open_meteo(lat, lon, retries=3, delay=5):
             res.raise_for_status()
             data = res.json()
             
-            # Data Instan (Saat Ini)
+            # Data Instan (Saat Ini / 1 Jam Terakhir)
             ch_latest = data['current']['precipitation']
             rh = data['current']['relative_humidity_2m']
             t2m = data['current']['temperature_2m']
@@ -62,7 +62,7 @@ def run_system():
     
     print(f"\n--- SIKLUS EKSEKUSI: {waktu_lengkap} ---")
     
-    # [ALUR 1] Open-Meteo API (Menggunakan variabel konsisten Supabase)
+    # [ALUR 1] Open-Meteo API 
     print("Menarik data dari Open-Meteo API...")
     ch_tuk, ch_tuk_latest, rh_tuk, t2m_tuk, ws10m_tuk = fetch_open_meteo(LOCS["Tukka"]["lat"], LOCS["Tukka"]["lon"])
     ch_sbbn, ch_sbbn_latest, rh_sbbn, t2m_sbbn, ws10m_sbbn = fetch_open_meteo(LOCS["Sibabangun"]["lat"], LOCS["Sibabangun"]["lon"])
@@ -116,33 +116,55 @@ def run_system():
         ch3_tuk = sum(r[0] for r in rows if r[0] is not None)
         ch3_sbbn = sum(r[1] for r in rows if r[1] is not None)
 
-        # Penentuan Lokasi Representatif
-        skor_tukka = max(ch_tuk, ch3_tuk)
-        skor_sibabangun = max(ch_sbbn, ch3_sbbn)
-
-        if skor_tukka >= skor_sibabangun:
-            rep_features = {'CH': ch_tuk, 'CH3': ch3_tuk, 'RH': rh_tuk, 'T2M': t2m_tuk, 'WS10M': ws10m_tuk}
-            chl_rep = ch_tuk_latest
-            lokasi_nama = 'Hulu Tukka'
-        else:
-            rep_features = {'CH': ch_sbbn, 'CH3': ch3_sbbn, 'RH': rh_sbbn, 'T2M': t2m_sbbn, 'WS10M': ws10m_sbbn}
-            chl_rep = ch_sbbn_latest
-            lokasi_nama = 'Hulu Sibabangun'
-
-        # [ALUR 4 & 5] Random Forest Classification
-        print("Menjalankan inferensi AI Random Forest...")
+        # [ALUR 4 & 5] Random Forest Classification (Inferensi Ganda)
+        print("Menjalankan inferensi AI Random Forest untuk kedua hulu...")
         try:
             model = joblib.load('random_forest_model.pkl')
             le = joblib.load('label_encoder.pkl')
             
-            input_df = pd.DataFrame([rep_features])
+            # Siapkan fitur kedua lokasi
+            features_tukka = {'CH': ch_tuk, 'CH3': ch3_tuk, 'RH': rh_tuk, 'T2M': t2m_tuk, 'WS10M': ws10m_tuk}
+            features_sbbn = {'CH': ch_sbbn, 'CH3': ch3_sbbn, 'RH': rh_sbbn, 'T2M': t2m_sbbn, 'WS10M': ws10m_sbbn}
             
-            prediksi_encoded = model.predict(input_df)[0]
-            status = le.inverse_transform([prediksi_encoded])[0].upper()
+            # Prediksi Hulu Tukka
+            df_tukka = pd.DataFrame([features_tukka])
+            status_tukka = le.inverse_transform([model.predict(df_tukka)[0]])[0].upper()
+            
+            # Prediksi Hulu Sibabangun
+            df_sbbn = pd.DataFrame([features_sbbn])
+            status_sbbn = le.inverse_transform([model.predict(df_sbbn)[0]])[0].upper()
+            
+            # Penentuan Lokasi Representatif (Worst-Case Scenario)
+            hierarki = {"RENDAH": 1, "SEDANG": 2, "TINGGI": 3}
+            
+            if hierarki[status_tukka] > hierarki[status_sbbn]:
+                status = status_tukka
+                lokasi_nama = "Hulu Tukka"
+                rep_features = features_tukka
+                chl_rep = ch_tuk_latest  # Ambil CH 1 Jam dari Tukka
+            elif hierarki[status_sbbn] > hierarki[status_tukka]:
+                status = status_sbbn
+                lokasi_nama = "Hulu Sibabangun"
+                rep_features = features_sbbn
+                chl_rep = ch_sbbn_latest  # Ambil CH 1 Jam dari Sibabangun
+            else:
+                # Jika status sama (Tie-Breaker: Pilih curah hujan harian tertinggi)
+                status = status_tukka
+                if features_tukka['CH'] >= features_sbbn['CH']:
+                    lokasi_nama = "Hulu Tukka"
+                    rep_features = features_tukka
+                    chl_rep = ch_tuk_latest
+                else:
+                    lokasi_nama = "Hulu Sibabangun"
+                    rep_features = features_sbbn
+                    chl_rep = ch_sbbn_latest
                 
         except Exception as ai_err:
             print(f"Error AI: {ai_err}")
             status = "RENDAH"
+            lokasi_nama = "Hulu Tukka"
+            rep_features = {'CH': ch_tuk, 'CH3': ch3_tuk, 'RH': rh_tuk, 'T2M': t2m_tuk, 'WS10M': ws10m_tuk}
+            chl_rep = ch_tuk_latest
 
         # [ALUR 6] Update Database
         print("Update status prediksi ke database...")
@@ -159,17 +181,18 @@ def run_system():
         if status in ["SEDANG", "TINGGI"]:
             if status == "TINGGI":
                 pesan_himbauan = "BAHAYA: Mohon segera lakukan langkah antisipasi dan evakuasi jika diperlukan!"
+                level_ancaman = "(BAHAYA)"
             elif status == "SEDANG":
                 pesan_himbauan = "WASPADA: Pantau terus kondisi cuaca secara berkala!"
-        
+                level_ancaman = "(WASPADA)"
             
             msg = (
                 "*INFORMASI POTENSI BANJIR BANDANG - KAB. TAPANULI TENGAH*\n"
                 "--------------------------------------------------\n\n"
-                f"*Potensi Banjir  :* {status} (WASPADA)\n"
+                f"*Potensi Banjir  :* {status} {level_ancaman}\n"
                 f"*Titik Sumber   :* {lokasi_nama}\n\n"
                 "*Data Meteorologi:*\n"
-                f"- Curah Hujan (1 Jam)   : {chl_rep} mm\n" 
+                f"- Curah Hujan (1 Jam)   : {chl_rep} mm\n"
                 f"- Curah Hujan (Harian)  : {rep_features['CH']} mm\n"
                 f"- Akumulasi Hujan (CH3) : {rep_features['CH3']:.1f} mm\n"
                 f"- Kelembapan Udara (RH) : {rep_features['RH']} %\n"
