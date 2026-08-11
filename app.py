@@ -275,7 +275,7 @@ with tab2:
     col_a, col_b = st.columns(2)
     with col_a:
         st.markdown("### 📍 Input Hulu Tukka")
-    
+     
         ch_tuk = st.number_input("Hujan Hari Ini (mm)", 0.0, 300.0, 10.0, key="sim_ch_tuk")
         ch3_tuk = st.number_input("Akumulasi 3 Hari (mm)", 0.0, 500.0, 20.0, key="sim_ch3_tuk")
         rh_tuk = st.slider("Kelembapan / RH (%)", 0, 100, 80, key="sim_rh_tuk")
@@ -295,23 +295,37 @@ with tab2:
         try:
             model, le = load_smart_model()
             
-            # 1. CARI LOKASI TERPARAH (REPRESENTATIF)
-            skor_tukka = max(ch_tuk, ch3_tuk)
-            skor_sibabangun = max(ch_sbbn, ch3_sbbn)
+            # 1. SIAPKAN FITUR KEDUA LOKASI
+            features_tukka = {'CH': ch_tuk, 'CH3': ch3_tuk, 'RH': rh_tuk, 'T2M': t2m_tuk, 'WS10M': ws10m_tuk}
+            features_sbbn = {'CH': ch_sbbn, 'CH3': ch3_sbbn, 'RH': rh_sbbn, 'T2M': t2m_sbbn, 'WS10M': ws10m_sbbn}
             
-            if skor_tukka >= skor_sibabangun:
+            # 2. INFERENSI GANDA OLEH AI
+            df_tukka = pd.DataFrame([features_tukka])
+            status_tukka = le.inverse_transform([model.predict(df_tukka)[0]])[0].upper()
+            
+            df_sbbn = pd.DataFrame([features_sbbn])
+            status_sbbn = le.inverse_transform([model.predict(df_sbbn)[0]])[0].upper()
+            
+            # 3. PENENTUAN LOKASI REPRESENTATIF (WORST-CASE SCENARIO)
+            hierarki = {"RENDAH": 1, "SEDANG": 2, "TINGGI": 3}
+            
+            if hierarki[status_tukka] > hierarki[status_sbbn]:
+                status_sim = status_tukka
                 rep_station = "Hulu Tukka"
-                features_dict = {'CH': ch_tuk, 'CH3': ch3_tuk, 'RH': rh_tuk, 'T2M': t2m_tuk, 'WS10M': ws10m_tuk}
-            else:
+                rep_features = features_tukka
+            elif hierarki[status_sbbn] > hierarki[status_tukka]:
+                status_sim = status_sbbn
                 rep_station = "Hulu Sibabangun"
-                features_dict = {'CH': ch_sbbn, 'CH3': ch3_sbbn, 'RH': rh_sbbn, 'T2M': t2m_sbbn, 'WS10M': ws10m_sbbn}
-            
-            # 2. LOGIKA KEPUTUSAN MURNI AI
-            features_list = ['CH', 'CH3', 'RH', 'T2M', 'WS10M']
-            input_df = pd.DataFrame([features_dict], columns=features_list)
-            
-            prediksi_kelas = model.predict(input_df)[0]
-            status_sim = le.inverse_transform([int(prediksi_kelas)])[0].upper()
+                rep_features = features_sbbn
+            else:
+                # Jika status sama (Tie-Breaker: Pilih curah hujan harian tertinggi)
+                status_sim = status_tukka
+                if features_tukka['CH'] >= features_sbbn['CH']:
+                    rep_station = "Hulu Tukka"
+                    rep_features = features_tukka
+                else:
+                    rep_station = "Hulu Sibabangun"
+                    rep_features = features_sbbn
             
             if status_sim == "TINGGI":
                 pesan_mitigasi = "⚠️ BAHAYA: Bahaya banjir tinggi. Segera evakuasi!"
@@ -321,7 +335,7 @@ with tab2:
                 pesan_mitigasi = "✅ AMAN: Kondisi cuaca dalam batas normal."
 
             st.markdown("---")
-            st.info(f"🔍 **Analisis Spasial:** Parameter Representatif (REP) diekstrak dari **{rep_station}** karena intensitas akumulasi hujannya lebih parah.")
+            st.info(f"🔍 **Analisis Spasial:** Parameter Representatif (REP) diekstrak dari **{rep_station}** karena memiliki status ancaman atau intensitas yang lebih parah.")
             
             color_res = "#1b5e20" if status_sim == "RENDAH" else "#e65100" if status_sim == "SEDANG" else "#b71c1c"
             
@@ -334,7 +348,7 @@ with tab2:
 
             # --- NOTIFIKASI TELEGRAM ---
             if status_sim in ["SEDANG", "TINGGI"]:
-                send_telegram_simulation(status_sim, rep_station, features_dict)
+                send_telegram_simulation(status_sim, rep_station, rep_features)
                 st.toast("🚨 Notifikasi Bahaya Simulasi berhasil dikirim ke Telegram!", icon="🚨")
 
         except Exception as e:
