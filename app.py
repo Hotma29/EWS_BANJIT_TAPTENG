@@ -299,7 +299,7 @@ with tab2:
             features_tukka = {'CH': ch_tuk, 'CH3': ch3_tuk, 'RH': rh_tuk, 'T2M': t2m_tuk, 'WS10M': ws10m_tuk}
             features_sbbn = {'CH': ch_sbbn, 'CH3': ch3_sbbn, 'RH': rh_sbbn, 'T2M': t2m_sbbn, 'WS10M': ws10m_sbbn}
             
-            # 2. INFERENSI GANDA OLEH AI
+            # 2. klasifikasi dua titik
             df_tukka = pd.DataFrame([features_tukka])
             status_tukka = le.inverse_transform([model.predict(df_tukka)[0]])[0].upper()
             
