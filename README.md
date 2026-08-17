@@ -1,2 +1,2 @@
-# EWS_BANJIT_TAPTENG
-prediksi potensi banjir
+# KLASIFIKASI POTENSI BANJIR BANDANG TAPTENG
+klasifikasi potensi banjir bandang
